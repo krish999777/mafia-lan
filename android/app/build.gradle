@@ -22,6 +22,7 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags ""
+                arguments "-DANDROID_STL=c++_shared"
             }
         }
     }
@@ -56,6 +57,16 @@ android {
         }
         debug {
             debuggable true
+        }
+    }
+
+    androidResources {
+        noCompress 'mjs', 'js', 'html', 'css', 'json'
+    }
+
+    packaging {
+        jniLibs {
+            pickFirsts += ['**/libc++_shared.so']
         }
     }
 }

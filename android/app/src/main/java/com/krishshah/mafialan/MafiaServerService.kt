@@ -30,6 +30,9 @@ class MafiaServerService : Service() {
 
         const val ACTION_START = "com.krishshah.mafialan.ACTION_START"
         const val ACTION_STOP = "com.krishshah.mafialan.ACTION_STOP"
+        const val ACTION_STATE_CHANGED = "com.krishshah.mafialan.STATE_CHANGED"
+        const val EXTRA_IS_RUNNING = "is_running"
+        const val EXTRA_SERVER_URL = "server_url"
 
         private val _isRunning = MutableStateFlow(false)
         val isRunning: StateFlow<Boolean> = _isRunning
@@ -70,19 +73,33 @@ class MafiaServerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {
+                Log.i(TAG, "Received ACTION_STOP")
                 stopServer()
                 stopSelf()
                 return START_NOT_STICKY
             }
             ACTION_START, null -> {
+                Log.i(TAG, "Received ACTION_START")
                 startServer()
             }
         }
         return START_STICKY
     }
 
+    private fun broadcastState(running: Boolean, url: String) {
+        val intent = Intent(ACTION_STATE_CHANGED).apply {
+            putExtra(EXTRA_IS_RUNNING, running)
+            putExtra(EXTRA_SERVER_URL, url)
+            setPackage(packageName)
+        }
+        sendBroadcast(intent)
+    }
+
     private fun startServer() {
-        if (_isRunning.value) return
+        if (_isRunning.value) {
+            Log.i(TAG, "Server already marked as running")
+            return
+        }
 
         val netInfo = NetworkUtils.getLocalIpAddress(this)
         val url = "http://${netInfo.ipAddress}:3000"
@@ -92,12 +109,27 @@ class MafiaServerService : Service() {
         acquireLocks()
 
         _isRunning.value = true
+        broadcastState(true, url)
 
         nodeThread = thread(name = "NodeServerThread") {
             try {
+                if (!NodeBridge.load()) {
+                    Log.e(TAG, "NodeBridge failed to load native libraries")
+                    _isRunning.value = false
+                    broadcastState(false, url)
+                    return@thread
+                }
+
                 val serverDir = extractServerAssetsIfNeeded()
-                val mainScript = File(serverDir, "main.js")
-                Log.i(TAG, "Starting Node.js server with entry: ${mainScript.absolutePath}")
+                val mainScript = File(serverDir, "bundle.mjs")
+                if (!mainScript.exists() || mainScript.length() == 0L) {
+                    Log.e(TAG, "Entry script does not exist or is empty: ${mainScript.absolutePath}")
+                    _isRunning.value = false
+                    broadcastState(false, url)
+                    return@thread
+                }
+
+                Log.i(TAG, "Starting Node.js server with entry: ${mainScript.absolutePath} (${mainScript.length()} bytes)")
 
                 val args = arrayOf(
                     "node",
@@ -109,6 +141,7 @@ class MafiaServerService : Service() {
                 Log.e(TAG, "Error running Node server", t)
             } finally {
                 _isRunning.value = false
+                broadcastState(false, url)
             }
         }
     }
@@ -116,9 +149,27 @@ class MafiaServerService : Service() {
     private fun stopServer() {
         releaseLocks()
         _isRunning.value = false
-        // Node process termination if running
+        broadcastState(false, _serverUrl.value)
+
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } catch (e: Exception) {
+            Log.w(TAG, "Error stopping foreground notification", e)
+        }
+
+        // Interrupt thread
         nodeThread?.interrupt()
         nodeThread = null
+
+        // In a dedicated process (:server), cleanly terminate the process after releasing resources
+        // so port 3000 is freed immediately and V8 can be re-initialized in a fresh process on next start
+        thread {
+            try {
+                Thread.sleep(250)
+            } catch (_: InterruptedException) {}
+            Log.i(TAG, "Exiting dedicated server process cleanly")
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }
     }
 
     private fun acquireLocks() {
@@ -167,7 +218,6 @@ class MafiaServerService : Service() {
             serverDir.mkdirs()
         }
 
-        // Always copy assets to ensure updates/bundling are fresh
         copyAssetDirectory("server", serverDir)
         return serverDir
     }
@@ -189,7 +239,6 @@ class MafiaServerService : Service() {
             } else {
                 // File
                 val targetFile = File(targetDir, item)
-                // Overwrite if size differs or not exists
                 copyAssetFile(itemPath, targetFile)
             }
         }
@@ -200,13 +249,21 @@ class MafiaServerService : Service() {
         var outputStream: FileOutputStream? = null
         try {
             inputStream = assets.open(assetPath)
+            val available = inputStream.available()
+
+            // If target file already exists and matches non-zero size, skip copying
+            if (targetFile.exists() && targetFile.length() > 0L && (available == 0 || targetFile.length() == available.toLong())) {
+                return
+            }
+
             outputStream = FileOutputStream(targetFile)
-            val buffer = ByteArray(8192)
+            val buffer = ByteArray(16384)
             var read: Int
             while (inputStream.read(buffer).also { read = it } != -1) {
                 outputStream.write(buffer, 0, read)
             }
             outputStream.flush()
+            Log.d(TAG, "Copied asset $assetPath -> ${targetFile.absolutePath} (${targetFile.length()} bytes)")
         } catch (e: Exception) {
             Log.e(TAG, "Error copying asset file: $assetPath", e)
         } finally {

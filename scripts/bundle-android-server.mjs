@@ -22,7 +22,7 @@ const entryPath = path.resolve(rootDir, 'server/src/index.ts');
 const outPath = path.resolve(assetsServerDir, 'bundle.mjs');
 const bannerStr = "import { createRequire } from 'module'; const require = createRequire(import.meta.url);";
 
-const esbuildCmd = `npx -y esbuild "${entryPath}" --bundle --platform=node --format=esm --banner:js="${bannerStr}" --outfile="${outPath}"`;
+const esbuildCmd = `npx -y esbuild "${entryPath}" --bundle --platform=node --format=esm --minify --banner:js="${bannerStr}" --outfile="${outPath}"`;
 
 execSync(esbuildCmd, { cwd: rootDir, stdio: 'inherit' });
 

@@ -72,6 +72,7 @@
                             android:layout_width="12dp"
                             android:layout_height="12dp"
                             android:background="@drawable/shape_dot_green"
+                            android:alpha="0.25"
                             android:layout_marginEnd="10dp" />
 
                         <TextView
@@ -79,8 +80,8 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="@string/server_status_online"
-                            android:textColor="@color/online_green"
+                            android:text="@string/server_status_offline"
+                            android:textColor="@color/text_secondary"
                             android:textSize="14sp"
                             android:textStyle="bold" />
 
@@ -121,6 +122,32 @@
 
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
+
+            <!-- SERVER CONTROLS (START / STOP) -->
+            <Button
+                android:id="@+id/btnStartServer"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="@string/btn_start_server"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:backgroundTint="@color/start_green"
+                android:layout_marginBottom="12dp" />
+
+            <Button
+                android:id="@+id/btnStopServer"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="@string/btn_stop_server"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:backgroundTint="@color/stop_red"
+                android:visibility="gone"
+                android:layout_marginBottom="12dp" />
 
             <!-- PRIMARY ACTION: COPY LINK -->
             <Button

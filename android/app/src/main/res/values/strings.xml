@@ -4,7 +4,10 @@
     <string name="server_title">MAFIA LAN SERVER</string>
     <string name="server_status_online">ONLINE &amp; BROADCASTING</string>
     <string name="server_status_offline">OFFLINE</string>
-    <string name="server_status_starting">STARTING...</string>
+    <string name="server_status_starting">STARTING SERVER...</string>
+    <string name="server_status_stopping">STOPPING SERVER...</string>
+    <string name="btn_start_server">▶ Start Server</string>
+    <string name="btn_stop_server">⏹ Stop Server</string>
     <string name="btn_copy_link">📋 Copy Game Link</string>
     <string name="btn_open_chrome">🌐 Open in Chrome</string>
     <string name="btn_play_app">🎮 Play in App</string>

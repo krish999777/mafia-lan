@@ -40,7 +40,12 @@ static void* thread_stdout_func(void*) {
     return nullptr;
 }
 
+static bool stdout_redirected = false;
+
 static void start_redirecting_stdout_stderr() {
+    if (stdout_redirected) return;
+    stdout_redirected = true;
+
     setvbuf(stdout, nullptr, _IONBF, 0);
     pipe(pipe_stdout);
     dup2(pipe_stdout[1], STDOUT_FILENO);
@@ -70,6 +75,8 @@ Java_com_krishshah_mafialan_NodeBridge_startNodeWithArguments(
         const char* path_chars = env->GetStringUTFChars(nodePath, nullptr);
         chdir(path_chars);
         setenv("NODE_PATH", path_chars, 1);
+        setenv("HOME", path_chars, 1);
+        setenv("TMPDIR", path_chars, 1);
         std::string public_dir = std::string(path_chars) + "/public";
         setenv("CLIENT_DIST_PATH", public_dir.c_str(), 1);
         env->ReleaseStringUTFChars(nodePath, path_chars);
