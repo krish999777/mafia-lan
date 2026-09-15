@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mafia LAN Host</string>
+    <string name="server_title">MAFIA LAN SERVER</string>
+    <string name="server_status_online">ONLINE &amp; BROADCASTING</string>
+    <string name="server_status_offline">OFFLINE</string>
+    <string name="server_status_starting">STARTING...</string>
+    <string name="btn_copy_link">📋 Copy Game Link</string>
+    <string name="btn_open_chrome">🌐 Open in Chrome</string>
+    <string name="btn_play_app">🎮 Play in App</string>
+    <string name="btn_share_link">📡 Share Link</string>
+    <string name="btn_restart">🔄 Restart Server</string>
+    <string name="how_to_join_title">How Players Join:</string>
+    <string name="how_to_join_steps">1. Turn on your Mobile Hotspot or connect to the same Wi-Fi.\n2. Have other players connect to your network.\n3. Share this URL or tell them to open it in their browser!</string>
+</resources>

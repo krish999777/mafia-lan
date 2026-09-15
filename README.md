@@ -28,6 +28,35 @@ A server-authoritative multiplayer Mafia game designed to run completely over a 
 - **Dynamic Difficulty Progression**: Scales automatically from Easy (Rounds 1–2), Medium (Rounds 3–4), to Hard (Rounds 5+).
 - **Full Reconnection Engine**: Session persistence across page reloads, tab switches, and Wi-Fi blips. Restores private roles, active minigames, votes, and chat history.
 - **Seamless Multi-Match Replay**: After Game Over, players return to the lobby one-by-one or via host controls to immediately start consecutive matches without restarting the server.
+- **📱 Standalone Android Server APK (`mafia-server.apk`)**:
+  - Run the entire Node.js server directly on an Android smartphone!
+  - Built-in network auto-discovery detects Mobile Hotspot (`192.168.43.1`) or Wi-Fi IP automatically.
+  - One-tap **Copy Game Link**, **Open in Chrome**, and **Play in App** with an integrated full-screen WebView.
+  - Persistent Android Foreground Service with WakeLock/WifiLock prevents CPU sleeping and keeps the game alive in the background.
+
+---
+
+## 📱 Running Directly on Android (Mobile Host APK)
+
+You can host Mafia LAN entirely on your Android phone without needing a computer!
+
+### 1. Install APK
+- Transfer the generated [mafia-server.apk](file:///Users/krishshah/all%20coding%20stuff/mafia_lan/mafia-server.apk) to your Android phone and install it (enable "Install unknown apps" if prompted).
+
+### 2. How to Host & Play
+1. Turn on your phone's **Personal / Mobile Hotspot** (or connect to a local Wi-Fi router).
+2. Open the **Mafia LAN Host** app.
+3. The server starts automatically and displays your Join URL (e.g. `http://192.168.43.1:3000`).
+4. Have your friends connect to your phone's Hotspot (or Wi-Fi).
+5. Tap **📋 Copy Game Link** or **📡 Share Link** to send the link, or have them type it in their browser.
+6. To join the game yourself on your host phone, either tap **🌐 Open in Chrome** or tap **🎮 Play in App** to play right inside the application!
+
+### 3. Rebuilding the APK
+To rebuild the Android APK at any time:
+```bash
+npm run build:android
+```
+The output APK is generated at `./mafia-server.apk` (and `android/app/build/outputs/apk/debug/app-debug.apk`).
 
 ---
 

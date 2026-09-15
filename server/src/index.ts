@@ -22,11 +22,14 @@ app.use(express.json());
 
 // Determine path to built client files
 const clientDistCandidates = [
+  process.env.CLIENT_DIST_PATH,
+  path.resolve(__dirname, 'public'),
   path.resolve(__dirname, '../../client/dist'),
   path.resolve(__dirname, '../../../../client/dist'),
   path.resolve(process.cwd(), 'client/dist'),
-  path.resolve(process.cwd(), '../client/dist')
-];
+  path.resolve(process.cwd(), '../client/dist'),
+  path.resolve(process.cwd(), 'public')
+].filter(Boolean) as string[];
 const clientDistPath = clientDistCandidates.find((p) => fs.existsSync(p)) || clientDistCandidates[0];
 const hasClientDist = fs.existsSync(clientDistPath);
 

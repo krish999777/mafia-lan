@@ -1,0 +1,5 @@
+{
+  "name": "mafia-android-server",
+  "type": "module",
+  "main": "bundle.mjs"
+}

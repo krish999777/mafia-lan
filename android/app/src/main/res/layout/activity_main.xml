@@ -1,0 +1,294 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_dark">
+
+    <!-- DASHBOARD VIEW -->
+    <ScrollView
+        android:id="@+id/dashboardLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <!-- HEADER -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🕵️‍♂️ MAFIA LAN"
+                    android:textColor="@color/crimson_primary"
+                    android:textSize="28sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.05" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Autonomous Offline Mobile Server"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+
+            <!-- SERVER STATUS CARD -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="@color/surface_dark"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="4dp"
+                android:layout_marginBottom="20dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <!-- Status indicator line -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <View
+                            android:id="@+id/statusDot"
+                            android:layout_width="12dp"
+                            android:layout_height="12dp"
+                            android:background="@drawable/shape_dot_green"
+                            android:layout_marginEnd="10dp" />
+
+                        <TextView
+                            android:id="@+id/tvStatus"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/server_status_online"
+                            android:textColor="@color/online_green"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/tvNetworkType"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@color/badge_bg"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="4dp"
+                            android:text="HOTSPOT"
+                            android:textColor="@color/accent_cyan"
+                            android:textSize="11sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <!-- Large URL display -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="GAME JOIN URL"
+                        android:textColor="@color/text_muted"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:layout_marginTop="18dp" />
+
+                    <TextView
+                        android:id="@+id/tvGameUrl"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="http://192.168.43.1:3000"
+                        android:textColor="@color/text_primary"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        android:textIsSelectable="true"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginBottom="8dp" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- PRIMARY ACTION: COPY LINK -->
+            <Button
+                android:id="@+id/btnCopyLink"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:text="@string/btn_copy_link"
+                android:textAllCaps="false"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:backgroundTint="@color/crimson_primary"
+                android:layout_marginBottom="12dp" />
+
+            <!-- SECONDARY ACTIONS -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <Button
+                    android:id="@+id/btnOpenChrome"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:text="@string/btn_open_chrome"
+                    android:textAllCaps="false"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:backgroundTint="@color/surface_border"
+                    android:layout_marginEnd="6dp" />
+
+                <Button
+                    android:id="@+id/btnPlayInApp"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:text="@string/btn_play_app"
+                    android:textAllCaps="false"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:backgroundTint="@color/surface_border"
+                    android:layout_marginStart="6dp" />
+            </LinearLayout>
+
+            <!-- SHARE & RESTART -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="24dp">
+
+                <Button
+                    android:id="@+id/btnShareLink"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_weight="1"
+                    android:text="@string/btn_share_link"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
+                    android:backgroundTint="@color/surface_dark"
+                    android:layout_marginEnd="6dp" />
+
+                <Button
+                    android:id="@+id/btnRestartServer"
+                    android:layout_width="0dp"
+                    android:layout_height="46dp"
+                    android:layout_weight="1"
+                    android:text="@string/btn_restart"
+                    android:textAllCaps="false"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
+                    android:backgroundTint="@color/surface_dark"
+                    android:layout_marginStart="6dp" />
+            </LinearLayout>
+
+            <!-- INSTRUCTION CARD -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="@color/surface_dark"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/how_to_join_title"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:layout_marginBottom="8dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/how_to_join_steps"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:lineSpacingMultiplier="1.3" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- IN-APP FULLSCREEN WEBVIEW OVERLAY -->
+    <LinearLayout
+        android:id="@+id/inAppWebViewContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:background="@color/bg_dark">
+
+        <!-- Top Bar for WebView -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:orientation="horizontal"
+            android:background="@color/surface_dark"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="12dp">
+
+            <Button
+                android:id="@+id/btnCloseWebView"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:text="← Dashboard"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:textColor="@color/text_primary"
+                android:backgroundTint="@color/surface_border" />
+
+            <TextView
+                android:id="@+id/tvWebViewTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Mafia LAN"
+                android:textColor="@color/text_secondary"
+                android:gravity="center"
+                android:textSize="13sp"
+                android:singleLine="true" />
+
+            <Button
+                android:id="@+id/btnReloadWebView"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:text="⟳ Reload"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:textColor="@color/text_primary"
+                android:backgroundTint="@color/surface_border" />
+        </LinearLayout>
+
+        <WebView
+            android:id="@+id/gameWebView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </LinearLayout>
+
+</FrameLayout>
