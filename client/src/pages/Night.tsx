@@ -22,8 +22,11 @@ interface NightProps {
   mafiaMessages: MafiaChatMessage[];
   mafiaTargetVotes: Record<string, string>;
   mafiaTargetId: string | null;
+  isMafiaUnanimous?: boolean;
+  mafiaRequiredVotes?: number;
   minigameChallenge: MinigameChallenge | null;
   minigameResult: { passed: boolean; message: string } | null;
+  minigameScore?: number;
   onSendMafiaMessage: (text: string) => void;
   onSelectMafiaTarget: (targetPlayerId: string) => void;
   onSubmitMinigameAction: (token: string, payload: any) => void;
@@ -41,8 +44,11 @@ export const Night: React.FC<NightProps> = ({
   mafiaMessages,
   mafiaTargetVotes,
   mafiaTargetId,
+  isMafiaUnanimous = false,
+  mafiaRequiredVotes = 1,
   minigameChallenge,
   minigameResult,
+  minigameScore = 0,
   onSendMafiaMessage,
   onSelectMafiaTarget,
   onSubmitMinigameAction,
@@ -50,7 +56,19 @@ export const Night: React.FC<NightProps> = ({
 }) => {
   const [inputText, setInputText] = useState('');
   const [secondsRemaining, setSecondsRemaining] = useState<number>(60);
+  const [feedbackToast, setFeedbackToast] = useState<{ passed: boolean; message: string } | null>(null);
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Transient toast notification for minigame results
+  useEffect(() => {
+    if (minigameResult) {
+      setFeedbackToast(minigameResult);
+      const timer = setTimeout(() => {
+        setFeedbackToast(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [minigameResult]);
 
   const currentPlayer = players.find((p) => p.id === currentPlayerId);
   const isAlive = currentPlayer ? currentPlayer.alive : false;
@@ -61,6 +79,14 @@ export const Night: React.FC<NightProps> = ({
   // From Mafia's perspective, teammates are known Mafia, so filter them out
   const mafiaIds = new Set([currentPlayerId, ...teammates.map((t) => t.id)]);
   const eligibleTargets = players.filter((p) => p.alive && !mafiaIds.has(p.id));
+
+  const livingMafiaCount = teammates.length + 1;
+  const requiredVotes = mafiaRequiredVotes || livingMafiaCount;
+  const isConsensusReached = Boolean(isMafiaUnanimous && mafiaTargetId);
+  const leadingTargetPlayer = mafiaTargetId ? players.find((p) => p.id === mafiaTargetId) : null;
+  const agreedOnLeadingTarget = mafiaTargetId
+    ? Object.values(mafiaTargetVotes).filter((tId) => tId === mafiaTargetId).length
+    : 0;
 
   // Countdown timer calculation
   useEffect(() => {
@@ -163,7 +189,8 @@ export const Night: React.FC<NightProps> = ({
           <div className="glass-card mafia-syndicate-card">
             <div className="syndicate-header">
               <span className="syndicate-icon">🤝</span>
-              <span className="syndicate-title">Mafia Teammates</span>
+              <span className="syndicate-title">Mafia Syndicate</span>
+              <span className="syndicate-count-pill">{livingMafiaCount} Members</span>
             </div>
             <div className="syndicate-list">
               <span className="teammate-pill current-player">You ({currentPlayer?.name})</span>
@@ -175,14 +202,35 @@ export const Night: React.FC<NightProps> = ({
             </div>
           </div>
 
+          {/* Unanimous Consensus Status Alert */}
+          <div
+            className={`consensus-status-alert ${
+              isConsensusReached ? 'consensus-status-locked' : 'consensus-status-pending'
+            }`}
+          >
+            <div className="consensus-alert-icon">{isConsensusReached ? '🎯' : '⚠️'}</div>
+            <div className="consensus-alert-content">
+              <div className="consensus-alert-title">
+                {isConsensusReached
+                  ? 'UNANIMOUS ASSASSINATION LOCKED'
+                  : `CONSENSUS PENDING (${agreedOnLeadingTarget}/${requiredVotes} AGREED)`}
+              </div>
+              <div className="consensus-alert-desc">
+                {isConsensusReached
+                  ? `All ${requiredVotes} Mafia members have selected ${leadingTargetPlayer?.name || 'the target'}. The kill is locked for dawn!`
+                  : `All ${requiredVotes} Mafia members must select the exact same target. If any Mafia votes differently or does not vote, NO ONE will be killed tonight!`}
+              </div>
+            </div>
+          </div>
+
           {/* Target Selection Section */}
           <div className="night-section">
             <div className="night-section-header">
               <span className="section-step-tag">Step 1</span>
-              <h3 className="section-title">Select Tonight's Target</h3>
+              <h3 className="section-title">Coordinate Syndicate Hit</h3>
             </div>
             <p className="section-hint">
-              Coordinate with your syndicate. Target with the most votes will be executed.
+              Tap a citizen below. All {requiredVotes} Syndicate members must select the same player to execute them.
             </p>
 
             <div className="night-target-list">
@@ -191,27 +239,37 @@ export const Night: React.FC<NightProps> = ({
               ) : (
                 eligibleTargets.map((target) => {
                   const isCurrentSelection = mafiaTargetVotes[currentPlayerId || ''] === target.id;
-                  const isConsensusLeader = mafiaTargetId === target.id;
                   const voters = getVotesForTarget(target.id);
+                  const isTargetUnanimous = voters.length === requiredVotes && requiredVotes > 0;
 
                   return (
                     <div
                       key={target.id}
-                      className={`night-target-card ${isConsensusLeader ? 'consensus-target' : ''} ${
+                      className={`night-target-card ${isTargetUnanimous ? 'consensus-target' : ''} ${
                         isCurrentSelection ? 'my-selection' : ''
                       }`}
                       onClick={() => onSelectMafiaTarget(target.id)}
                     >
                       <div className="target-card-info">
                         <div className="target-name">
-                          {isConsensusLeader && <span className="crosshair-icon">🎯</span>}
+                          {isTargetUnanimous ? (
+                            <span className="crosshair-icon">🎯</span>
+                          ) : voters.length > 0 ? (
+                            <span className="crosshair-icon">👀</span>
+                          ) : null}
                           <span>{target.name}</span>
                         </div>
-                        {voters.length > 0 && (
-                          <div className="target-voters">
-                            Votes: {voters.join(', ')}
-                          </div>
-                        )}
+                        <div className="target-voters-row">
+                          {voters.length > 0 ? (
+                            <span className={`voters-badge ${isTargetUnanimous ? 'badge-locked' : 'badge-progress'}`}>
+                              {isTargetUnanimous
+                                ? '🎯 100% UNANIMOUS HIT'
+                                : `Voted: ${voters.join(', ')} (${voters.length}/${requiredVotes})`}
+                            </span>
+                          ) : (
+                            <span className="voters-empty">0 / {requiredVotes} votes</span>
+                          )}
+                        </div>
                       </div>
 
                       <button
@@ -224,7 +282,7 @@ export const Night: React.FC<NightProps> = ({
                           onSelectMafiaTarget(target.id);
                         }}
                       >
-                        {isCurrentSelection ? 'Selected 🎯' : 'Target'}
+                        {isCurrentSelection ? 'Selected 🎯' : 'Select'}
                       </button>
                     </div>
                   );
@@ -297,25 +355,40 @@ export const Night: React.FC<NightProps> = ({
       {/* LIVING CIVILIAN VIEW */}
       {isAlive && isCivilian && (
         <div className="civilian-night-content">
-          {minigameResult ? (
-            <div
-              className={`glass-card minigame-outcome-card ${
-                minigameResult.passed ? 'outcome-passed' : 'outcome-failed'
-              }`}
-            >
-              <div className="outcome-icon">{minigameResult.passed ? '🛡️' : '⚠️'}</div>
-              <h3 className="outcome-title">
-                {minigameResult.passed ? 'Defenses Operational' : 'Security Breach!'}
-              </h3>
-              <p className="outcome-message">{minigameResult.message}</p>
-              <div className="outcome-note">
-                {minigameResult.passed
-                  ? 'Your safehouse is fortified. Remain still until daybreak.'
-                  : 'Your alarms tripped! Stay vigilant until dawn.'}
+          {/* Defense HUD & Guaranteed Innocent Incentive */}
+          <div className="glass-card civilian-defense-hud">
+            <div className="defense-hud-top">
+              <div className="defense-score-badge">
+                <span className="shield-icon">🛡️</span>
+                <div>
+                  <div className="score-label">DEFENSES SECURED</div>
+                  <div className="score-value">{minigameScore} Solved</div>
+                </div>
+              </div>
+              <div className="defense-guarantee-pill">
+                ⭐ Top Defender Revealed as <strong>PROVEN INNOCENT</strong> at Dawn!
               </div>
             </div>
-          ) : minigameChallenge ? (
-            <div className="minigame-wrapper">
+            <p className="defense-hint">
+              Defense tasks generate on a continuous loop. Keep solving as many as you can before morning to prove your innocence to the town!
+            </p>
+          </div>
+
+          {/* Transient Result Feedback Toast */}
+          {feedbackToast && (
+            <div
+              className={`minigame-feedback-toast ${
+                feedbackToast.passed ? 'toast-success' : 'toast-failed'
+              }`}
+            >
+              <span className="toast-icon">{feedbackToast.passed ? '✅' : '⚠️'}</span>
+              <span className="toast-text">{feedbackToast.message}</span>
+            </div>
+          )}
+
+          {/* Continuous Minigame Challenge Loop */}
+          {minigameChallenge ? (
+            <div className="minigame-wrapper" key={minigameChallenge.token}>
               {minigameChallenge.id === 'number-sequence' && (
                 <NumberSequenceGame
                   challenge={minigameChallenge}
@@ -411,8 +484,8 @@ export const Night: React.FC<NightProps> = ({
               <div className="status-pulsing" style={{ fontSize: '2rem', marginBottom: '0.8rem' }}>
                 📡
               </div>
-              <h3>Patrolling Safehouse...</h3>
-              <p>Calibrating security equipment. Stand by for task assignment.</p>
+              <h3>Generating Next Security Task...</h3>
+              <p>Calibrating defense challenge. Stand by...</p>
             </div>
           )}
         </div>

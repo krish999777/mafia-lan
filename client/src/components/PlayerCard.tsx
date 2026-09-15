@@ -4,13 +4,14 @@ import { PlayerSummary } from '@shared/types.js';
 interface PlayerCardProps {
   player: PlayerSummary;
   isCurrentPlayer: boolean;
+  isProvenCivilian?: boolean;
 }
 
-export const PlayerCard: React.FC<PlayerCardProps> = ({ player, isCurrentPlayer }) => {
+export const PlayerCard: React.FC<PlayerCardProps> = ({ player, isCurrentPlayer, isProvenCivilian = false }) => {
   const initial = player.name ? player.name.charAt(0).toUpperCase() : '?';
 
   return (
-    <div className={`player-item ${isCurrentPlayer ? 'is-me' : ''}`}>
+    <div className={`player-item ${isCurrentPlayer ? 'is-me' : ''} ${isProvenCivilian ? 'is-proven-civilian' : ''}`}>
       <div className="player-info">
         <div className="player-avatar">{initial}</div>
         <div>
@@ -18,6 +19,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, isCurrentPlayer 
             <span>{player.name}</span>
             {player.isHost && <span className="badge-host">HOST</span>}
             {isCurrentPlayer && <span className="badge-you">YOU</span>}
+            {isProvenCivilian && <span className="badge-proven-civilian">🛡️ PROVEN INNOCENT</span>}
           </div>
         </div>
       </div>

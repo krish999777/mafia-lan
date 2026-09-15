@@ -288,14 +288,21 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
     // Civilian cannot send Mafia message
     assert.throws(() => room.sendMafiaMessage(c1.id, 'Im talking'), /only living mafia/i);
 
-    // Mafia target selection
+    // Mafia target selection: host votes c1 (only 1 of 2 living mafia, not yet unanimous)
     room.selectMafiaTarget(host.id, c1.id);
-    const targetUpdate = mMessages.find((m) => m.type === 'MAFIA_TARGET_UPDATE');
-    assert.ok(targetUpdate, 'Mafia should receive target update');
-    assert.equal(targetUpdate.targetId, c1.id);
+    const targetUpdate1 = mMessages[mMessages.length - 1];
+    assert.ok(targetUpdate1, 'Mafia should receive target update');
+    assert.equal(targetUpdate1.isUnanimous, false, 'Should not be unanimous yet');
+    assert.equal(targetUpdate1.targetId, undefined);
 
     // Mafia cannot target fellow Mafia
     assert.throws(() => room.selectMafiaTarget(host.id, m2.id), /cannot target fellow mafia/i);
+
+    // m2 also selects c1 -> Now unanimous!
+    room.selectMafiaTarget(m2.id, c1.id);
+    const targetUpdate2 = mMessages[mMessages.length - 1];
+    assert.equal(targetUpdate2.isUnanimous, true, 'Should now be unanimous');
+    assert.equal(targetUpdate2.targetId, c1.id);
 
     // Civilian solves minigame
     room.submitMinigameAction(c1.id, minigameMsg.challenge.token, {
@@ -525,6 +532,132 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
     // Now host starts next match (Match 2)
     room.startGame(p1.id);
     assert.equal(room.phase, 'ROLE_REVEAL');
+  });
+
+  it('Unanimous Mafia targeting: requires all living Mafia to agree or assassination fails', () => {
+    const room = new Room('UNAN');
+    const sentMafiaMsgs: any[] = [];
+    const socketM1 = {
+      readyState: WebSocket.OPEN,
+      send: (d: string) => sentMafiaMsgs.push(JSON.parse(d)),
+      close: () => {},
+      terminate: () => {}
+    } as unknown as WebSocket;
+
+    const { player: m1 } = room.addPlayer('MafiaOne', socketM1);
+    const { player: m2 } = room.addPlayer('MafiaTwo', createMockSocket());
+    const { player: c1 } = room.addPlayer('CivOne', createMockSocket());
+    const { player: c2 } = room.addPlayer('CivTwo', createMockSocket());
+    const { player: c3 } = room.addPlayer('CivThree', createMockSocket());
+
+    room.startGame(m1.id);
+    room.getPlayer(m1.id)!.role = 'MAFIA';
+    room.getPlayer(m2.id)!.role = 'MAFIA';
+    room.getPlayer(c1.id)!.role = 'CIVILIAN';
+    room.getPlayer(c2.id)!.role = 'CIVILIAN';
+    room.getPlayer(c3.id)!.role = 'CIVILIAN';
+
+    room.startNight();
+    assert.equal(room.phase, 'NIGHT');
+
+    // 1. M1 targets C1 -> Split (M2 hasn't voted yet)
+    sentMafiaMsgs.length = 0;
+    room.selectMafiaTarget(m1.id, c1.id);
+    assert.equal(room.nightMafiaTargetId, undefined, 'Target must not be set without unanimous agreement');
+    const update1 = sentMafiaMsgs.find((m) => m.type === 'MAFIA_TARGET_UPDATE');
+    assert.equal(update1.isUnanimous, false);
+    assert.equal(update1.requiredVotes, 2);
+
+    // 2. M2 targets C2 -> Split (1 vote for C1, 1 vote for C2)
+    room.selectMafiaTarget(m2.id, c2.id);
+    assert.equal(room.nightMafiaTargetId, undefined, 'Split votes must not set a target');
+
+    // 3. M2 agrees and switches to C1 -> 2/2 unanimous agreement!
+    sentMafiaMsgs.length = 0;
+    room.selectMafiaTarget(m2.id, c1.id);
+    assert.equal(room.nightMafiaTargetId, c1.id, 'Target locked when all living Mafia agree');
+    const update3 = sentMafiaMsgs.find((m) => m.type === 'MAFIA_TARGET_UPDATE');
+    assert.equal(update3.isUnanimous, true);
+    assert.equal(update3.targetId, c1.id);
+
+    // Keep civilians safe from minigame failure
+    room.minigameResults.set(c1.id, true);
+    room.minigameResults.set(c2.id, true);
+    room.minigameResults.set(c3.id, true);
+
+    // Resolve Night -> C1 is assassinated due to unanimous consensus
+    room.resolveNight();
+    assert.equal(room.getPlayer(c1.id)!.alive, false, 'Unanimously agreed target must be eliminated');
+    assert.equal(room.getPlayer(c2.id)!.alive, true);
+    assert.equal(room.getPlayer(c3.id)!.alive, true);
+  });
+
+  it('Looping minigames and Guaranteed Innocent Civilian identification', () => {
+    const room = new Room('LOOP');
+    const sentCivMsgs: any[] = [];
+    const socketCiv = {
+      readyState: WebSocket.OPEN,
+      send: (d: string) => sentCivMsgs.push(JSON.parse(d)),
+      close: () => {},
+      terminate: () => {}
+    } as unknown as WebSocket;
+
+    const { player: host } = room.addPlayer('HostMafia', createMockSocket());
+    const { player: c1 } = room.addPlayer('StarCiv', socketCiv);
+    const { player: c2 } = room.addPlayer('OtherCiv', createMockSocket());
+    const { player: c3 } = room.addPlayer('LazyCiv', createMockSocket());
+
+    room.startGame(host.id);
+    room.getPlayer(host.id)!.role = 'MAFIA';
+    room.getPlayer(c1.id)!.role = 'CIVILIAN';
+    room.getPlayer(c2.id)!.role = 'CIVILIAN';
+    room.getPlayer(c3.id)!.role = 'CIVILIAN';
+
+    room.startNight();
+
+    // Civ 1 solves first challenge
+    let c1Challenge = room.activeMinigames.get(c1.id)!;
+    c1Challenge.validator = () => true;
+    room.submitMinigameAction(c1.id, c1Challenge.token, 1);
+
+    // Verify Civ 1 received initial challenge from startNight + next challenge from loop!
+    const assignedMsgs = sentCivMsgs.filter((m) => m.type === 'MINIGAME_ASSIGNED');
+    assert.equal(assignedMsgs.length, 2);
+    assert.equal(assignedMsgs[1].score, 1);
+
+    // Civ 1 solves second challenge
+    c1Challenge = room.activeMinigames.get(c1.id)!;
+    c1Challenge.validator = () => true;
+    room.submitMinigameAction(c1.id, c1Challenge.token, 1);
+
+    // Civ 1 solves third challenge
+    c1Challenge = room.activeMinigames.get(c1.id)!;
+    c1Challenge.validator = () => true;
+    room.submitMinigameAction(c1.id, c1Challenge.token, 1);
+
+    // Civ 2 solves 1 challenge
+    const c2Challenge = room.activeMinigames.get(c2.id)!;
+    c2Challenge.validator = () => true;
+    room.submitMinigameAction(c2.id, c2Challenge.token, 1);
+
+    // Civ 3 fails / solves 0 minigames (will disappear due to breached safehouse)
+
+    // Resolve night
+    room.resolveNight();
+
+    // Verify StarCiv (C1) is identified as Top Defender and proven innocent!
+    assert.ok(room.nightResult?.topDefender);
+    assert.equal(room.nightResult?.topDefender?.id, c1.id);
+    assert.equal(room.nightResult?.topDefender?.name, 'StarCiv');
+    assert.equal(room.nightResult?.topDefender?.score, 3);
+    assert.ok(room.provenCivilianIds.includes(c1.id), 'StarCiv must be in provenCivilianIds');
+
+    // C3 solved 0 tasks -> breached and eliminated
+    assert.equal(room.getPlayer(c3.id)!.alive, false);
+
+    // Clean reset back to lobby removes proven status for fresh game
+    room.resetToLobby();
+    assert.equal(room.provenCivilianIds.length, 0);
   });
 });
 

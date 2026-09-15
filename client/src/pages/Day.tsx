@@ -8,6 +8,7 @@ interface DayProps {
   role: Role | null;
   isHost: boolean;
   nightResult?: NightResolutionResult | null;
+  provenCivilianIds?: string[];
   onStartVoting: () => void;
 }
 
@@ -18,9 +19,11 @@ export const Day: React.FC<DayProps> = ({
   role,
   isHost,
   nightResult,
+  provenCivilianIds = [],
   onStartVoting
 }) => {
   const livingPlayers = players.filter((p) => p.alive);
+  const provenCivilianPlayers = livingPlayers.filter((p) => provenCivilianIds.includes(p.id));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '0.5rem' }}>
@@ -63,6 +66,21 @@ export const Day: React.FC<DayProps> = ({
         </div>
       )}
 
+      {/* Verified Innocent Civilians Banner */}
+      {provenCivilianPlayers.length > 0 && (
+        <div className="glass-card day-proven-banner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+            <span style={{ fontSize: '1.2rem' }}>🛡️</span>
+            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--accent-cyan)' }}>
+              Verified Innocent Civilians ({provenCivilianPlayers.length})
+            </span>
+          </div>
+          <p style={{ fontSize: '0.82rem', color: 'var(--text-main)', margin: 0, lineHeight: 1.4 }}>
+            {provenCivilianPlayers.map((p) => p.name).join(', ')} proved their innocence through top safehouse defenses. They are confirmed 100% innocent Civilians!
+          </p>
+        </div>
+      )}
+
       {/* Discussion prompt */}
       <div className="glass-card" style={{ padding: '1.25rem', textAlign: 'center' }}>
         <div style={{ fontSize: '1.3rem', marginBottom: '0.3rem' }}>🗣️</div>
@@ -88,6 +106,7 @@ export const Day: React.FC<DayProps> = ({
               key={player.id}
               player={player}
               isCurrentPlayer={player.id === currentPlayerId}
+              isProvenCivilian={provenCivilianIds.includes(player.id)}
             />
           ))}
         </div>

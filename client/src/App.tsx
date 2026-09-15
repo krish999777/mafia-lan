@@ -35,9 +35,13 @@ export const App: React.FC = () => {
     mafiaMessages,
     mafiaTargetVotes,
     mafiaTargetId,
+    isMafiaUnanimous,
+    mafiaRequiredVotes,
     minigameChallenge,
     minigameResult,
+    minigameScore,
     nightResult,
+    provenCivilianIds,
     error,
     lanInfo,
     isJoining,
@@ -102,6 +106,7 @@ export const App: React.FC = () => {
             role={role}
             isHost={isHost}
             nightResult={nightResult}
+            provenCivilianIds={provenCivilianIds}
             onStartVoting={startVoting}
           />
         );
@@ -115,6 +120,7 @@ export const App: React.FC = () => {
             hasVoted={hasVoted}
             votedCount={votedCount}
             totalLiving={totalLiving}
+            provenCivilianIds={provenCivilianIds}
             onCastVote={castVote}
             onForceResolve={forceResolveVote}
           />
@@ -141,8 +147,11 @@ export const App: React.FC = () => {
             mafiaMessages={mafiaMessages}
             mafiaTargetVotes={mafiaTargetVotes}
             mafiaTargetId={mafiaTargetId}
+            isMafiaUnanimous={isMafiaUnanimous}
+            mafiaRequiredVotes={mafiaRequiredVotes}
             minigameChallenge={minigameChallenge}
             minigameResult={minigameResult}
+            minigameScore={minigameScore}
             onSendMafiaMessage={sendMafiaMessage}
             onSelectMafiaTarget={selectMafiaTarget}
             onSubmitMinigameAction={submitMinigameAction}

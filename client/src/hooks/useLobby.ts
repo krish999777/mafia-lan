@@ -29,6 +29,10 @@ export function useLobby() {
   const [minigameChallenge, setMinigameChallenge] = useState<MinigameChallenge | null>(null);
   const [minigameResult, setMinigameResult] = useState<{ passed: boolean; message: string } | null>(null);
   const [nightResult, setNightResult] = useState<NightResolutionResult | null>(null);
+  const [provenCivilianIds, setProvenCivilianIds] = useState<string[]>([]);
+  const [minigameScore, setMinigameScore] = useState<number>(0);
+  const [isMafiaUnanimous, setIsMafiaUnanimous] = useState<boolean>(false);
+  const [mafiaRequiredVotes, setMafiaRequiredVotes] = useState<number>(1);
   const [error, setError] = useState<string | null>(null);
   const [lanInfo, setLanInfo] = useState<LanInfo | null>(null);
   const [isJoining, setIsJoining] = useState<boolean>(false);
@@ -95,6 +99,7 @@ export function useLobby() {
           if (msg.mafiaCount) setMafiaCountState(msg.mafiaCount);
           if (msg.rejoinedPlayerIds) setRejoinedPlayerIds(msg.rejoinedPlayerIds);
           if (msg.nightResult) setNightResult(msg.nightResult);
+          if (msg.provenCivilianIds) setProvenCivilianIds(msg.provenCivilianIds);
 
           if (msg.phase === 'LOBBY') {
             setRole(null);
@@ -107,16 +112,24 @@ export function useLobby() {
             setMafiaMessages([]);
             setMafiaTargetVotes({});
             setMafiaTargetId(null);
+            setIsMafiaUnanimous(false);
+            setMafiaRequiredVotes(1);
             setMinigameChallenge(null);
             setMinigameResult(null);
+            setMinigameScore(0);
             setNightResult(null);
+            setProvenCivilianIds([]);
           } else if (msg.phase === 'DAY') {
             setHasVoted(false);
             setVoteResult(null);
             setMinigameChallenge(null);
             setMinigameResult(null);
+            setMinigameScore(0);
+            setIsMafiaUnanimous(false);
           } else if (msg.phase === 'NIGHT') {
             setMinigameResult(null);
+            setMinigameScore(0);
+            setIsMafiaUnanimous(false);
           }
 
           const currentPid = storage.getPlayerId();
@@ -205,22 +218,31 @@ export function useLobby() {
         case 'MAFIA_TARGET_UPDATE':
           setMafiaTargetVotes(msg.votes);
           setMafiaTargetId(msg.targetId || null);
+          setIsMafiaUnanimous(Boolean(msg.isUnanimous));
+          if (msg.requiredVotes !== undefined) setMafiaRequiredVotes(msg.requiredVotes);
           break;
 
         case 'MINIGAME_ASSIGNED':
           setMinigameChallenge(msg.challenge);
-          setMinigameResult(null);
+          if (msg.score !== undefined) setMinigameScore(msg.score);
           break;
 
         case 'MINIGAME_RESULT':
           setMinigameResult({ passed: msg.passed, message: msg.message });
+          if (msg.score !== undefined) setMinigameScore(msg.score);
           break;
 
         case 'NIGHT_RESULT':
           setNightResult({
             disappearedPlayers: msg.disappearedPlayers,
+            topDefender: msg.topDefender,
             durationMs: msg.durationMs
           });
+          if (msg.topDefender) {
+            setProvenCivilianIds((prev) =>
+              prev.includes(msg.topDefender!.id) ? prev : [...prev, msg.topDefender!.id]
+            );
+          }
           if (msg.durationMs) {
             setPhaseEndsAt(Date.now() + msg.durationMs);
           }
@@ -333,6 +355,10 @@ export function useLobby() {
     setMinigameChallenge(null);
     setMinigameResult(null);
     setNightResult(null);
+    setProvenCivilianIds([]);
+    setMinigameScore(0);
+    setIsMafiaUnanimous(false);
+    setMafiaRequiredVotes(1);
     setPhase('LOBBY');
     setPhaseEndsAt(null);
     setIsHost(false);
@@ -365,9 +391,13 @@ export function useLobby() {
     mafiaMessages,
     mafiaTargetVotes,
     mafiaTargetId,
+    isMafiaUnanimous,
+    mafiaRequiredVotes,
     minigameChallenge,
     minigameResult,
+    minigameScore,
     nightResult,
+    provenCivilianIds,
     error,
     lanInfo,
     isJoining,

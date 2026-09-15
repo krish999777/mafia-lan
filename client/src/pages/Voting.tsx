@@ -8,6 +8,7 @@ interface VotingProps {
   hasVoted: boolean;
   votedCount: number;
   totalLiving: number;
+  provenCivilianIds?: string[];
   onCastVote: (targetPlayerId: string) => void;
   onForceResolve: () => void;
 }
@@ -19,6 +20,7 @@ export const Voting: React.FC<VotingProps> = ({
   hasVoted,
   votedCount,
   totalLiving,
+  provenCivilianIds = [],
   onCastVote,
   onForceResolve
 }) => {
@@ -95,21 +97,27 @@ export const Voting: React.FC<VotingProps> = ({
           <div className="candidate-list">
             {candidates.map((candidate) => {
               const isSelected = selectedTargetId === candidate.id;
+              const isProvenInnocent = provenCivilianIds.includes(candidate.id);
               return (
                 <div
                   key={candidate.id}
-                  className={`candidate-item ${isSelected ? 'selected' : ''}`}
+                  className={`candidate-item ${isSelected ? 'selected' : ''} ${isProvenInnocent ? 'candidate-proven-innocent' : ''}`}
                   onClick={() => setSelectedTargetId(candidate.id)}
                 >
                   <div className="radio-circle">
                     {isSelected && <div className="radio-inner-dot" />}
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
                     <div className="player-avatar" style={{ width: '32px', height: '32px', fontSize: '0.85rem' }}>
                       {candidate.name.charAt(0).toUpperCase()}
                     </div>
                     <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{candidate.name}</span>
+                    {isProvenInnocent && (
+                      <span className="badge-proven-civilian" style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
+                        🛡️ PROVEN INNOCENT
+                      </span>
+                    )}
                   </div>
                 </div>
               );

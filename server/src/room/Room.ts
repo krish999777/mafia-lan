@@ -18,8 +18,10 @@ export class Room {
   public mafiaMessages: MafiaChatMessage[] = [];
   public activeMinigames: Map<string, { token: string; validator: (payload: any) => boolean; challenge: MinigameChallenge }> = new Map();
   public minigameResults: Map<string, boolean> = new Map();
+  public minigamesSolved: Map<string, number> = new Map();
   public nightMafiaTargetId?: string;
   public nightResult?: NightResolutionResult;
+  public provenCivilianIds: string[] = [];
 
   private players: Map<string, Player> = new Map();
   private sockets: Map<string, WebSocket> = new Map();
@@ -247,7 +249,8 @@ export class Room {
       phaseEndsAt: this.phaseEndsAt,
       mafiaCount: this.getMafiaCount(),
       rejoinedPlayerIds: Array.from(this.rejoinedPlayerIds),
-      nightResult: this.nightResult
+      nightResult: this.nightResult,
+      provenCivilianIds: this.provenCivilianIds
     });
   }
 
@@ -265,7 +268,8 @@ export class Room {
       phaseEndsAt: this.phaseEndsAt,
       mafiaCount: this.getMafiaCount(),
       rejoinedPlayerIds: Array.from(this.rejoinedPlayerIds),
-      nightResult: this.nightResult
+      nightResult: this.nightResult,
+      provenCivilianIds: this.provenCivilianIds
     });
   }
 
@@ -295,6 +299,13 @@ export class Room {
 
     this.rejoinedPlayerIds.clear();
     this.gameOverResult = undefined;
+    this.voteResult = undefined;
+    this.nightResult = undefined;
+    this.nightMafiaTargetId = undefined;
+    this.minigameResults.clear();
+    this.minigamesSolved.clear();
+    this.activeMinigames.clear();
+    this.provenCivilianIds = [];
 
     // Assign roles using GameEngine with host-chosen or balanced mafia count
     const playerIds = Array.from(this.players.keys());
@@ -522,6 +533,7 @@ export class Room {
     this.mafiaMessages = [];
     this.activeMinigames.clear();
     this.minigameResults.clear();
+    this.minigamesSolved.clear();
     this.nightMafiaTargetId = undefined;
 
     const livingCivilians = Array.from(this.players.values()).filter(
@@ -531,21 +543,25 @@ export class Room {
       (p) => p.alive && p.role === 'MAFIA'
     );
 
-    // Assign minigames to all living Civilians
+    // Initialize looping minigames for all living Civilians
     for (const civilian of livingCivilians) {
+      this.minigamesSolved.set(civilian.id, 0);
       const { challenge, validator } = MinigameEngine.generateChallenge(civilian.id, this.round);
       this.activeMinigames.set(civilian.id, { token: challenge.token, validator, challenge });
       this.sendTo(civilian.id, {
         type: 'MINIGAME_ASSIGNED',
-        challenge
+        challenge,
+        score: 0
       });
     }
 
-    // Initialize Mafia night target status
+    // Initialize Mafia night target status with unanimous requirement
     for (const mafioso of livingMafia) {
       this.sendTo(mafioso.id, {
         type: 'MAFIA_TARGET_UPDATE',
-        votes: {}
+        votes: {},
+        isUnanimous: false,
+        requiredVotes: livingMafia.length
       });
     }
 
@@ -601,7 +617,8 @@ export class Room {
   }
 
   /**
-   * Cast/update a Mafia target selection (Mafia only, targeting living Civilians)
+   * Cast/update a Mafia target selection (Mafia only, targeting living Civilians).
+   * Target is only locked for execution if 100% of living Mafia select the exact same person.
    */
   public selectMafiaTarget(mafiaId: string, targetId: string): void {
     const selector = this.players.get(mafiaId);
@@ -624,40 +641,44 @@ export class Room {
 
     this.mafiaTargetVotes.set(mafiaId, targetId);
 
-    // Tally votes to find current majority target
-    const tallies = new Map<string, number>();
-    for (const tId of this.mafiaTargetVotes.values()) {
-      tallies.set(tId, (tallies.get(tId) || 0) + 1);
-    }
-
-    let topVotes = 0;
-    let currentLeader: string | undefined = undefined;
-    for (const [tId, count] of tallies.entries()) {
-      if (count > topVotes) {
-        topVotes = count;
-        currentLeader = tId;
-      }
-    }
+    const livingMafia = Array.from(this.players.values()).filter(
+      (p) => p.alive && p.role === 'MAFIA'
+    );
+    const requiredVotes = livingMafia.length;
 
     const votesObj: Record<string, string> = {};
     for (const [mId, tId] of this.mafiaTargetVotes.entries()) {
       votesObj[mId] = tId;
     }
 
-    // Broadcast EXCLUSIVELY to living Mafia
+    // Unanimous check: all living Mafia must have voted, and all must agree on the same target
+    const allVoted = this.mafiaTargetVotes.size === requiredVotes;
+    const allSameTarget = allVoted && Array.from(this.mafiaTargetVotes.values()).every((t) => t === targetId);
+
+    if (allSameTarget) {
+      this.nightMafiaTargetId = targetId;
+    } else {
+      this.nightMafiaTargetId = undefined;
+    }
+
+    // Broadcast live selections EXCLUSIVELY to living Mafia
     for (const player of this.players.values()) {
       if (player.alive && player.role === 'MAFIA') {
         this.sendTo(player.id, {
           type: 'MAFIA_TARGET_UPDATE',
           votes: votesObj,
-          targetId: currentLeader
+          targetId: this.nightMafiaTargetId,
+          isUnanimous: allSameTarget,
+          requiredVotes
         });
       }
     }
   }
 
   /**
-   * Validate and record a Civilian minigame result
+   * Validate and record a Civilian minigame action.
+   * Minigames run on loop throughout the entire night round:
+   * each pass increments score and continuously supplies new challenges.
    */
   public submitMinigameAction(playerId: string, token: string, payload: any): void {
     const player = this.players.get(playerId);
@@ -674,24 +695,44 @@ export class Room {
       throw new Error('Invalid or expired minigame challenge token');
     }
 
-    if (this.minigameResults.has(playerId)) {
-      return; // Already submitted and recorded
+    const passed = Boolean(active.validator(payload));
+    const currentScore = this.minigamesSolved.get(playerId) || 0;
+    const newScore = passed ? currentScore + 1 : currentScore;
+
+    if (passed) {
+      this.minigamesSolved.set(playerId, newScore);
+      this.minigameResults.set(playerId, true);
     }
 
-    const passed = Boolean(active.validator(payload));
-    this.minigameResults.set(playerId, passed);
-
+    // Send immediate result feedback with updated score
     this.sendTo(playerId, {
       type: 'MINIGAME_RESULT',
       passed,
+      score: newScore,
       message: passed
-        ? 'Sector secured. You survived the night!'
-        : 'Task failed! You were exposed.'
+        ? `Task solved! Total defenses secured: ${newScore}`
+        : 'Task missed! Security recalibrating...'
+    });
+
+    // Immediately generate and issue next challenge in loop
+    const next = MinigameEngine.generateChallenge(playerId, this.round);
+    this.activeMinigames.set(playerId, {
+      token: next.challenge.token,
+      validator: next.validator,
+      challenge: next.challenge
+    });
+
+    this.sendTo(playerId, {
+      type: 'MINIGAME_ASSIGNED',
+      challenge: next.challenge,
+      score: newScore
     });
   }
 
   /**
    * Resolve night actions, transition to NIGHT_RESOLUTION, and announce concealed deaths.
+   * Mafia only kills if unanimous consensus was achieved.
+   * Top Defender among surviving civilians is revealed as Proven Innocent!
    */
   public resolveNight(callerId?: string): void {
     if (callerId && callerId !== this.hostId) {
@@ -702,50 +743,52 @@ export class Room {
       return;
     }
 
-    // 1. Resolve final Mafia target (majority consensus with random tie-break)
-    const tallies = new Map<string, number>();
-    for (const tId of this.mafiaTargetVotes.values()) {
-      tallies.set(tId, (tallies.get(tId) || 0) + 1);
-    }
-
-    let topVotes = 0;
-    let topTargets: string[] = [];
-    for (const [tId, count] of tallies.entries()) {
-      if (count > topVotes) {
-        topVotes = count;
-        topTargets = [tId];
-      } else if (count === topVotes && count > 0) {
-        topTargets.push(tId);
-      }
-    }
-
-    if (topTargets.length > 0) {
-      const selected = topTargets[Math.floor(Math.random() * topTargets.length)];
-      this.nightMafiaTargetId = selected;
-    }
-
-    // 2. Identify all players who disappeared during the night
     const disappearedMap = new Map<string, { id: string; name: string }>();
 
-    // A. Living Civilians who failed or timed out on their minigame
+    // 1. Safehouse defense check: Civilians who solved 0 minigames during the night are breached
     const livingCivilians = Array.from(this.players.values()).filter(
       (p) => p.alive && p.role === 'CIVILIAN'
     );
     for (const civ of livingCivilians) {
-      const passed = this.minigameResults.get(civ.id) === true;
-      if (!passed) {
+      const solved = this.minigamesSolved.get(civ.id) || 0;
+      const passedDirect = this.minigameResults.get(civ.id) === true;
+      if (solved === 0 && !passedDirect) {
         civ.alive = false;
         disappearedMap.set(civ.id, { id: civ.id, name: civ.name });
       }
     }
 
-    // B. Mafia assassination target
+    // 2. Mafia assassination: ONLY executed if all living Mafia reached unanimous agreement
     if (this.nightMafiaTargetId) {
       const targetPlayer = this.players.get(this.nightMafiaTargetId);
       if (targetPlayer && targetPlayer.alive) {
         targetPlayer.alive = false;
         disappearedMap.set(targetPlayer.id, { id: targetPlayer.id, name: targetPlayer.name });
       }
+    }
+
+    // 3. Identify Top Defender among surviving living civilians
+    const survivingCivilians = Array.from(this.players.values()).filter(
+      (p) => p.alive && p.role === 'CIVILIAN'
+    );
+
+    let topDefender: { id: string; name: string; score: number } | undefined = undefined;
+    let highestScore = 0;
+
+    for (const civ of survivingCivilians) {
+      const score = (this.minigamesSolved.get(civ.id) || 0) || (this.minigameResults.get(civ.id) === true ? 1 : 0);
+      if (score > highestScore) {
+        highestScore = score;
+        topDefender = { id: civ.id, name: civ.name, score };
+      }
+    }
+
+    if (topDefender && topDefender.score > 0) {
+      if (!this.provenCivilianIds.includes(topDefender.id)) {
+        this.provenCivilianIds.push(topDefender.id);
+      }
+    } else {
+      topDefender = undefined;
     }
 
     // Clear active night challenge state
@@ -758,13 +801,15 @@ export class Room {
 
     this.nightResult = {
       disappearedPlayers: Array.from(disappearedMap.values()),
+      topDefender,
       durationMs
     };
 
-    // Broadcast night resolution message (with strict concealed deaths)
+    // Broadcast night resolution message
     this.broadcast({
       type: 'NIGHT_RESULT',
       disappearedPlayers: this.nightResult.disappearedPlayers,
+      topDefender,
       durationMs
     });
 
@@ -921,28 +966,26 @@ export class Room {
     // 4. Night phase state restoration
     if (this.phase === 'NIGHT') {
       if (player.role === 'CIVILIAN') {
-        if (this.minigameResults.has(playerId)) {
-          const passed = Boolean(this.minigameResults.get(playerId));
-          this.sendTo(playerId, {
-            type: 'MINIGAME_RESULT',
-            passed,
-            message: passed
-              ? 'Sector secured. You survived the night!'
-              : 'Task failed! You were exposed.'
-          });
-        } else if (this.activeMinigames.has(playerId)) {
+        const score = this.minigamesSolved.get(playerId) || 0;
+        if (this.activeMinigames.has(playerId)) {
           const active = this.activeMinigames.get(playerId)!;
           this.sendTo(playerId, {
             type: 'MINIGAME_ASSIGNED',
-            challenge: active.challenge
+            challenge: active.challenge,
+            score
           });
         }
       } else if (player.role === 'MAFIA') {
-        // Send Mafia target status
+        const livingMafia = Array.from(this.players.values()).filter(
+          (p) => p.alive && p.role === 'MAFIA'
+        );
+        const votesObj = Object.fromEntries(this.mafiaTargetVotes.entries());
         this.sendTo(playerId, {
           type: 'MAFIA_TARGET_UPDATE',
-          votes: Object.fromEntries(this.mafiaTargetVotes.entries()),
-          targetId: this.nightMafiaTargetId
+          votes: votesObj,
+          targetId: this.nightMafiaTargetId,
+          isUnanimous: Boolean(this.nightMafiaTargetId),
+          requiredVotes: livingMafia.length
         });
 
         // Replay mafia chat history
@@ -960,6 +1003,7 @@ export class Room {
       this.sendTo(playerId, {
         type: 'NIGHT_RESULT',
         disappearedPlayers: this.nightResult.disappearedPlayers,
+        topDefender: this.nightResult.topDefender,
         durationMs: this.nightResult.durationMs
       });
     }
@@ -991,7 +1035,9 @@ export class Room {
     this.nightResult = undefined;
     this.nightMafiaTargetId = undefined;
     this.minigameResults.clear();
+    this.minigamesSolved.clear();
     this.activeMinigames.clear();
+    this.provenCivilianIds = [];
 
     // Revive all players and clear roles
     for (const player of this.players.values()) {

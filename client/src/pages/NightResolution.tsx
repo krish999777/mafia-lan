@@ -83,6 +83,26 @@ export const NightResolution: React.FC<NightResolutionProps> = ({
         </div>
       </div>
 
+      {/* Proven Innocent Civilian Showcase */}
+      {nightResult?.topDefender && (
+        <div className="glass-card top-defender-showcase-card">
+          <div className="defender-crown-icon">🌟</div>
+          <div className="defender-badge-title">PROVEN INNOCENT CIVILIAN</div>
+          <h3 className="defender-player-name">
+            {nightResult.topDefender.name}
+            {nightResult.topDefender.id === currentPlayerId && (
+              <span className="me-tag"> (You!)</span>
+            )}
+          </h3>
+          <div className="defender-stats-pill">
+            🛡️ {nightResult.topDefender.score} Defense {nightResult.topDefender.score === 1 ? 'Task' : 'Tasks'} Completed Tonight
+          </div>
+          <p className="defender-clearance-text">
+            Confirmed 100% <strong>INNOCENT CIVILIAN</strong> by the town defense grid. They cannot be Mafia!
+          </p>
+        </div>
+      )}
+
       {/* Concealed Casualty Report */}
       <div className="dawn-report-section">
         <div className="report-header">

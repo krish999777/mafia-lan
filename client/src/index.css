@@ -2404,4 +2404,271 @@ body::before {
   padding: 0.6rem;
 }
 
+/* ─────────────────────────────────────────────────────────
+   Proven Civilian & Unanimous Mafia Kill Enhancements
+   ───────────────────────────────────────────────────────── */
+.badge-proven-civilian {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.4rem;
+}
+
+.player-item.is-proven-civilian {
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.05);
+}
+
+.candidate-item.candidate-proven-innocent {
+  border-color: rgba(56, 189, 248, 0.35);
+  background: rgba(56, 189, 248, 0.05);
+}
+
+.top-defender-showcase-card {
+  text-align: center;
+  padding: 1.75rem 1.25rem;
+  background: radial-gradient(circle at 50% 20%, rgba(56, 189, 248, 0.2) 0%, rgba(19, 22, 34, 0.95) 85%);
+  border: 1.5px solid rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 35px rgba(56, 189, 248, 0.25);
+  border-radius: var(--radius-lg);
+  animation: cardPop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.defender-crown-icon {
+  font-size: 2.6rem;
+  margin-bottom: 0.3rem;
+  filter: drop-shadow(0 0 12px rgba(245, 158, 11, 0.6));
+  animation: bounce 2s infinite ease-in-out;
+}
+
+.defender-badge-title {
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  margin-bottom: 0.35rem;
+}
+
+.defender-player-name {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #fff;
+  margin: 0 0 0.6rem 0;
+  letter-spacing: 0.02em;
+}
+
+.defender-stats-pill {
+  display: inline-block;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #7dd3fc;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 0.35rem 0.9rem;
+  border-radius: var(--radius-full);
+  margin-bottom: 0.75rem;
+}
+
+.defender-clearance-text {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.day-proven-banner {
+  border-left: 3.5px solid var(--accent-cyan);
+  padding: 0.85rem 1rem;
+  background: rgba(56, 189, 248, 0.08);
+  border-color: rgba(56, 189, 248, 0.3);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.civilian-defense-hud {
+  padding: 1.1rem 1.25rem;
+  border-color: rgba(56, 189, 248, 0.3);
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(19, 22, 34, 0.85) 100%);
+  box-shadow: 0 4px 20px rgba(56, 189, 248, 0.1);
+  margin-bottom: 0.75rem;
+}
+
+.defense-hud-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+.defense-score-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.defense-score-badge .shield-icon {
+  font-size: 1.75rem;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.5));
+}
+
+.score-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.score-value {
+  font-family: var(--font-mono);
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--accent-cyan);
+}
+
+.defense-guarantee-pill {
+  font-size: 0.74rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-full);
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fde68a;
+}
+
+.defense-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.minigame-feedback-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 1.1rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 0.75rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.minigame-feedback-toast.toast-success {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1.5px solid rgba(34, 197, 94, 0.45);
+  color: #4ade80;
+  box-shadow: 0 0 18px rgba(34, 197, 94, 0.2);
+}
+
+.minigame-feedback-toast.toast-failed {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1.5px solid rgba(239, 68, 68, 0.45);
+  color: #f87171;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.2);
+}
+
+.consensus-status-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.95rem 1.15rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 0.75rem;
+  animation: fadeIn 0.25s ease-out;
+}
+
+.consensus-status-alert.consensus-status-locked {
+  background: rgba(230, 57, 70, 0.16);
+  border: 1.5px solid rgba(230, 57, 70, 0.5);
+  border-left-width: 5px;
+  border-left-color: var(--accent-crimson);
+  box-shadow: 0 0 25px rgba(230, 57, 70, 0.25);
+}
+
+.consensus-status-alert.consensus-status-pending {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1.5px solid rgba(245, 158, 11, 0.4);
+  border-left-width: 5px;
+  border-left-color: var(--accent-gold);
+}
+
+.consensus-alert-icon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.consensus-alert-title {
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.25rem;
+}
+
+.consensus-status-locked .consensus-alert-title {
+  color: #ff4d6d;
+}
+
+.consensus-status-pending .consensus-alert-title {
+  color: var(--accent-gold);
+}
+
+.consensus-alert-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.syndicate-count-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-full);
+  background: rgba(230, 57, 70, 0.2);
+  color: #ff4d6d;
+  border: 1px solid rgba(230, 57, 70, 0.4);
+  margin-left: auto;
+}
+
+.target-voters-row {
+  margin-top: 0.25rem;
+}
+
+.voters-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+}
+
+.voters-badge.badge-locked {
+  background: rgba(230, 57, 70, 0.25);
+  color: #ff4d6d;
+  border: 1px solid rgba(230, 57, 70, 0.5);
+  font-weight: 800;
+}
+
+.voters-badge.badge-progress {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fde68a;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.voters-empty {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
 

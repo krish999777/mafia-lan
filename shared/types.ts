@@ -39,6 +39,7 @@ export type VoteResult = {
 
 export type NightResolutionResult = {
   disappearedPlayers: { id: string; name: string }[];
+  topDefender?: { id: string; name: string; score: number };
   durationMs: number;
 };
 
@@ -113,6 +114,7 @@ export type ServerMessage =
       mafiaCount?: number;
       rejoinedPlayerIds?: string[];
       nightResult?: NightResolutionResult;
+      provenCivilianIds?: string[];
     }
   | {
       type: 'ROLE_ASSIGNED';
@@ -136,9 +138,15 @@ export type ServerMessage =
       type: 'GAME_OVER';
     } & GameOverResult)
   | { type: 'MAFIA_CHAT_MESSAGE'; message: MafiaChatMessage }
-  | { type: 'MAFIA_TARGET_UPDATE'; votes: Record<string, string>; targetId?: string }
-  | { type: 'MINIGAME_ASSIGNED'; challenge: MinigameChallenge }
-  | { type: 'MINIGAME_RESULT'; passed: boolean; message: string }
+  | {
+      type: 'MAFIA_TARGET_UPDATE';
+      votes: Record<string, string>;
+      targetId?: string;
+      isUnanimous?: boolean;
+      requiredVotes?: number;
+    }
+  | { type: 'MINIGAME_ASSIGNED'; challenge: MinigameChallenge; score?: number }
+  | { type: 'MINIGAME_RESULT'; passed: boolean; message: string; score?: number }
   | { type: 'REJOIN_UPDATE'; rejoinedPlayerIds: string[] }
   | { type: 'PLAYER_JOINED'; player: PlayerSummary }
   | { type: 'PLAYER_LEFT'; playerId: string }
