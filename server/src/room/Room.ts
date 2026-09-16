@@ -4,7 +4,7 @@ import { GameEngine } from '../game/GameEngine.js';
 import { MinigameEngine } from '../minigames/MinigameEngine.js';
 
 export class Room {
-  public static readonly PROVEN_INNOCENT_CHANCE = 0.5;
+  public static readonly PROVEN_INNOCENT_CHANCE = 0.5;// chance for proven innocent happening
 
   public readonly roomCode: string;
   public hostId: string = '';
