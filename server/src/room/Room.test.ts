@@ -267,9 +267,10 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
     assert.ok(minigameMsg, 'Civilian should receive MINIGAME_ASSIGNED');
     assert.ok(minigameMsg.challenge.token, 'Challenge should contain token');
 
-    // Mafia socket should NOT have received minigame
+    // Mafia socket SHOULD also receive minigame for stealth disguise
     const mafiaMinigame = mMessages.find((m) => m.type === 'MINIGAME_ASSIGNED');
-    assert.equal(mafiaMinigame, undefined, 'Mafia should not receive minigames');
+    assert.ok(mafiaMinigame, 'Mafia should also receive MINIGAME_ASSIGNED for disguise');
+    assert.ok(mafiaMinigame.challenge.token, 'Mafia challenge should contain token');
 
     // Mafia sends private chat message
     mMessages.length = 0;

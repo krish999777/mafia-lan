@@ -386,4 +386,63 @@ describe('WebSocket Multi-Client Flow', () => {
     p3.close();
     p4.close();
   });
+
+  it('delivers MINIGAME_ASSIGNED to both Mafia and Civilians during Night for disguise', async () => {
+    const host = await connectClient();
+    const p2 = await connectClient();
+    const p3 = await connectClient();
+    const p4 = await connectClient();
+
+    const hostCreatedPromise = waitForMessage(host, 'ROOM_CREATED');
+    host.send(JSON.stringify({ type: 'CREATE_ROOM', name: 'HostAlice' } as ClientMessage));
+    const { roomCode } = (await hostCreatedPromise) as any;
+
+    const p2Join = waitForMessage(p2, 'ROOM_JOINED');
+    p2.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, name: 'Bob' } as ClientMessage));
+    await p2Join;
+
+    const p3Join = waitForMessage(p3, 'ROOM_JOINED');
+    p3.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, name: 'Charlie' } as ClientMessage));
+    const { playerId: p3Id } = (await p3Join) as any;
+
+    const p4Join = waitForMessage(p4, 'ROOM_JOINED');
+    p4.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, name: 'Dave' } as ClientMessage));
+    await p4Join;
+
+    // Force p3 to be Mafia
+    host.send(JSON.stringify({ type: 'DEV_FORCE_MAFIA', targetPlayerId: p3Id } as ClientMessage));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Start game
+    host.send(JSON.stringify({ type: 'START_GAME' } as ClientMessage));
+
+    // Wait for room to be in ROLE_REVEAL
+    await waitForMessage(host, 'ROLE_ASSIGNED');
+    await waitForMessage(p3, 'ROLE_ASSIGNED');
+
+    // Host initiates Night
+    const p3MinigamePromise = waitForMessage(p3, 'MINIGAME_ASSIGNED');
+    const p2MinigamePromise = waitForMessage(p2, 'MINIGAME_ASSIGNED');
+    const p3MafiaUpdatePromise = waitForMessage(p3, 'MAFIA_TARGET_UPDATE');
+
+    host.send(JSON.stringify({ type: 'START_NIGHT' } as ClientMessage));
+
+    const p3Minigame = (await p3MinigamePromise) as any;
+    const p2Minigame = (await p2MinigamePromise) as any;
+    const p3MafiaUpdate = (await p3MafiaUpdatePromise) as any;
+
+    // Verify Mafia (p3) received minigame challenge AND target update
+    assert.equal(p3Minigame.type, 'MINIGAME_ASSIGNED');
+    assert.ok(p3Minigame.challenge.token);
+    assert.equal(p3MafiaUpdate.type, 'MAFIA_TARGET_UPDATE');
+
+    // Verify Civilian (p2) received minigame challenge
+    assert.equal(p2Minigame.type, 'MINIGAME_ASSIGNED');
+    assert.ok(p2Minigame.challenge.token);
+
+    host.close();
+    p2.close();
+    p3.close();
+    p4.close();
+  });
 });

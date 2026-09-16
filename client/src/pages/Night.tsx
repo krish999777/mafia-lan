@@ -57,6 +57,7 @@ export const Night: React.FC<NightProps> = ({
   const [inputText, setInputText] = useState('');
   const [secondsRemaining, setSecondsRemaining] = useState<number>(60);
   const [feedbackToast, setFeedbackToast] = useState<{ passed: boolean; message: string } | null>(null);
+  const [mafiaActiveTab, setMafiaActiveTab] = useState<'PUZZLE' | 'SYNDICATE'>('PUZZLE');
   const chatBottomRef = useRef<HTMLDivElement | null>(null);
 
   // Transient toast notification for minigame results
@@ -74,6 +75,10 @@ export const Night: React.FC<NightProps> = ({
   const isAlive = currentPlayer ? currentPlayer.alive : false;
   const isMafia = role === 'MAFIA';
   const isCivilian = role === 'CIVILIAN';
+
+  // When Mafia is in puzzle view, show identical Civilian disguise
+  const showDisguise = isMafia && mafiaActiveTab === 'PUZZLE';
+  const displayAsMafia = isMafia && !showDisguise;
 
   // Eligible targets for Mafia (living players who are NOT Mafia)
   // From Mafia's perspective, teammates are known Mafia, so filter them out
@@ -143,14 +148,14 @@ export const Night: React.FC<NightProps> = ({
   return (
     <div className="night-page-container">
       {/* Night Atmosphere Header */}
-      <div className={`night-banner ${isMafia ? 'mafia-night-banner' : ''}`}>
+      <div className={`night-banner ${displayAsMafia ? 'mafia-night-banner' : ''}`}>
         <div className="night-banner-top">
           <div className="night-title-group">
             <span className="night-moon-icon">🌙</span>
             <div>
               <h2 className="night-title">NIGHT {round || 1}</h2>
               <p className="night-subtitle">
-                {isMafia ? 'Mafia Syndicate Operation' : 'Town Lockdown & Defense'}
+                {displayAsMafia ? 'Mafia Syndicate Operation' : 'Town Lockdown & Defense'}
               </p>
             </div>
           </div>
@@ -163,7 +168,7 @@ export const Night: React.FC<NightProps> = ({
 
         {/* Role Identity Indicator */}
         <div className="night-role-badge">
-          <span>{isMafia ? '🗡️ Mafia' : isCivilian ? '🛡️ Civilian' : '👁️ Spectator'}</span>
+          <span>{displayAsMafia ? '🗡️ Mafia' : isCivilian || showDisguise ? '🛡️ Civilian' : '👁️ Spectator'}</span>
           <span className="night-alive-status">
             {isAlive ? '• ACTIVE' : '• ELIMINATED'}
           </span>
@@ -182,8 +187,8 @@ export const Night: React.FC<NightProps> = ({
         </div>
       )}
 
-      {/* LIVING MAFIA VIEW */}
-      {isAlive && isMafia && (
+      {/* LIVING MAFIA VIEW (Syndicate Mode) */}
+      {isAlive && isMafia && mafiaActiveTab === 'SYNDICATE' && (
         <div className="mafia-night-content">
           {/* Syndicate Roster */}
           <div className="glass-card mafia-syndicate-card">
@@ -349,11 +354,23 @@ export const Night: React.FC<NightProps> = ({
               </form>
             </div>
           </div>
+
+          {/* Disguise Toggle: Switch back to Defense Puzzle */}
+          <div className="night-view-switcher-bar">
+            <button
+              type="button"
+              className="night-switcher-btn puzzle-btn"
+              onClick={() => setMafiaActiveTab('PUZZLE')}
+            >
+              <span className="btn-icon">🛡️</span>
+              <span>Back to Defense Puzzle (Disguise)</span>
+            </button>
+          </div>
         </div>
       )}
 
-      {/* LIVING CIVILIAN VIEW */}
-      {isAlive && isCivilian && (
+      {/* LIVING CIVILIAN / MAFIA PUZZLE DISGUISE VIEW */}
+      {isAlive && (isCivilian || (isMafia && mafiaActiveTab === 'PUZZLE')) && (
         <div className="civilian-night-content">
           {/* Defense HUD & Guaranteed Innocent Incentive */}
           <div className="glass-card civilian-defense-hud">
@@ -486,6 +503,21 @@ export const Night: React.FC<NightProps> = ({
               </div>
               <h3>Generating Next Security Task...</h3>
               <p>Calibrating defense challenge. Stand by...</p>
+            </div>
+          )}
+
+          {/* If Mafia in Disguise: Switcher button to access Syndicate Hit */}
+          {isMafia && (
+            <div className="night-view-switcher-bar">
+              <button
+                type="button"
+                className="night-switcher-btn syndicate-btn"
+                onClick={() => setMafiaActiveTab('SYNDICATE')}
+              >
+                <span className="btn-icon">🗡️</span>
+                <span>Switch to Syndicate Hit</span>
+                {isConsensusReached && <span className="consensus-badge">🎯 Locked</span>}
+              </button>
             </div>
           )}
         </div>

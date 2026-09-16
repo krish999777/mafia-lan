@@ -573,19 +573,15 @@ export class Room {
     this.minigamesSolved.clear();
     this.nightMafiaTargetId = undefined;
 
-    const livingCivilians = Array.from(this.players.values()).filter(
-      (p) => p.alive && p.role === 'CIVILIAN'
-    );
-    const livingMafia = Array.from(this.players.values()).filter(
-      (p) => p.alive && p.role === 'MAFIA'
-    );
+    const livingPlayers = Array.from(this.players.values()).filter((p) => p.alive);
+    const livingMafia = livingPlayers.filter((p) => p.role === 'MAFIA');
 
-    // Initialize looping minigames for all living Civilians
-    for (const civilian of livingCivilians) {
-      this.minigamesSolved.set(civilian.id, 0);
-      const { challenge, validator } = MinigameEngine.generateChallenge(civilian.id, this.round);
-      this.activeMinigames.set(civilian.id, { token: challenge.token, validator, challenge });
-      this.sendTo(civilian.id, {
+    // Initialize looping minigames for all living players (Civilians + Mafia cover minigame)
+    for (const player of livingPlayers) {
+      this.minigamesSolved.set(player.id, 0);
+      const { challenge, validator } = MinigameEngine.generateChallenge(player.id, this.round);
+      this.activeMinigames.set(player.id, { token: challenge.token, validator, challenge });
+      this.sendTo(player.id, {
         type: 'MINIGAME_ASSIGNED',
         challenge,
         score: 0
@@ -1002,17 +998,18 @@ export class Room {
 
     // 4. Night phase state restoration
     if (this.phase === 'NIGHT') {
-      if (player.role === 'CIVILIAN') {
+      // Restore minigame for any living player (Civilians and Mafia cover game)
+      if (player.alive && this.activeMinigames.has(playerId)) {
         const score = this.minigamesSolved.get(playerId) || 0;
-        if (this.activeMinigames.has(playerId)) {
-          const active = this.activeMinigames.get(playerId)!;
-          this.sendTo(playerId, {
-            type: 'MINIGAME_ASSIGNED',
-            challenge: active.challenge,
-            score
-          });
-        }
-      } else if (player.role === 'MAFIA') {
+        const active = this.activeMinigames.get(playerId)!;
+        this.sendTo(playerId, {
+          type: 'MINIGAME_ASSIGNED',
+          challenge: active.challenge,
+          score
+        });
+      }
+
+      if (player.role === 'MAFIA') {
         const livingMafia = Array.from(this.players.values()).filter(
           (p) => p.alive && p.role === 'MAFIA'
         );
