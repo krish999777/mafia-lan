@@ -911,16 +911,19 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
   it('only reveals Proven Innocent 50% of the time based on probability roll', () => {
     const helperSetup = () => {
       const room = new Room('PROVEN50');
-      const h = room.addPlayer('Host', createMockSocket());
-      const c1 = room.addPlayer('Civ1', createMockSocket());
-      const c2 = room.addPlayer('Civ2', createMockSocket());
-      const c3 = room.addPlayer('Civ3', createMockSocket());
+      const { player: h } = room.addPlayer('Host', createMockSocket());
+      const { player: c1 } = room.addPlayer('Civ1', createMockSocket());
+      const { player: c2 } = room.addPlayer('Civ2', createMockSocket());
+      const { player: c3 } = room.addPlayer('Civ3', createMockSocket());
       room.startGame(h.id);
-      room.phase = 'NIGHT';
+      room.getPlayer(h.id)!.role = 'MAFIA';
+      room.getPlayer(c1.id)!.role = 'CIVILIAN';
+      room.getPlayer(c2.id)!.role = 'CIVILIAN';
+      room.getPlayer(c3.id)!.role = 'CIVILIAN';
+      room.startNight();
+
       // All civilians solve 1 minigame so they survive safehouse defense
       for (const civ of [c1, c2, c3]) {
-        const p = room.getPlayer(civ.id)!;
-        p.role = 'CIVILIAN';
         const ch = room.activeMinigames.get(civ.id)!;
         ch.validator = () => true;
         room.submitMinigameAction(civ.id, ch.token, 1);
