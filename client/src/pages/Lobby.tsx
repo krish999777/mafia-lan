@@ -40,6 +40,12 @@ export const Lobby: React.FC<LobbyProps> = ({
   const [copied, setCopied] = useState<boolean>(false);
   const [devPlayerClicks, setDevPlayerClicks] = useState<Record<string, number>>({});
 
+  React.useEffect(() => {
+    if (!isDevMode) {
+      setDevPlayerClicks({});
+    }
+  }, [isDevMode]);
+
   const handleCopyCode = () => {
     navigator.clipboard.writeText(roomCode).then(() => {
       setCopied(true);

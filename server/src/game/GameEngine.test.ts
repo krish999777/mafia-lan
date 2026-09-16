@@ -142,10 +142,20 @@ describe('GameEngine — Role Assignment & Balancing', () => {
       assert.equal(roles.get('p1'), 'CIVILIAN');
     }
 
-    // Multiple forced mafia
-    const multiRoles = GameEngine.assignRoles(players, 2, ['p2', 'p5']);
+    // Multiple forced mafia in 7-player game where 2 mafias are valid
+    const players7 = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'];
+    const multiRoles = GameEngine.assignRoles(players7, 2, ['p2', 'p5']);
     assert.equal(multiRoles.get('p2'), 'MAFIA');
     assert.equal(multiRoles.get('p5'), 'MAFIA');
+
+    // Forcing more than the allowed mafia count replaces the oldest chosen with the latest (without increasing mafia count)
+    const excessRoles = GameEngine.assignRoles(players7, 2, ['p1', 'p2', 'p5']);
+    assert.equal(excessRoles.get('p1'), 'CIVILIAN', 'Oldest chosen mafia p1 should be replaced');
+    assert.equal(excessRoles.get('p2'), 'MAFIA', 'p2 should remain mafia');
+    assert.equal(excessRoles.get('p5'), 'MAFIA', 'Latest chosen mafia p5 should be mafia');
+
+    const totalMafia = Array.from(excessRoles.values()).filter((r) => r === 'MAFIA').length;
+    assert.equal(totalMafia, 2, 'Total mafia count must not increase');
   });
 });
 

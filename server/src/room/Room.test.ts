@@ -697,12 +697,215 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
 
     // Developer marks p3 as Mafia
     room.forceMafia(p3.id);
-    assert.ok(room.devForcedMafiaIds.has(p3.id));
+    assert.ok(room.devForcedMafiaIds.includes(p3.id));
 
     room.startGame(host.id);
 
     assert.equal(room.getPlayer(p3.id)?.role, 'MAFIA', 'Forced player p3 must be assigned MAFIA');
-    assert.equal(room.devForcedMafiaIds.size, 0, 'devForcedMafiaIds should be cleared after role assignment');
+    assert.equal(room.devForcedMafiaIds.length, 0, 'devForcedMafiaIds should be cleared after role assignment');
+  });
+
+  it('replaces oldest chosen mafia with newest when exceeding mafia count without increasing total mafias', () => {
+    const room = new Room('FIFO');
+    const { player: host } = room.addPlayer('HostPlayer', createMockSocket());
+    const { player: p2 } = room.addPlayer('PlayerTwo', createMockSocket());
+    const { player: p3 } = room.addPlayer('PlayerThree', createMockSocket());
+    const { player: p4 } = room.addPlayer('PlayerFour', createMockSocket());
+
+    // 4 players has 1 Mafia allowed
+    assert.equal(room.getMafiaCount(), 1);
+
+    // Developer marks p2 first, then p3
+    room.forceMafia(p2.id);
+    assert.deepEqual(room.devForcedMafiaIds, [p2.id]);
+
+    room.forceMafia(p3.id);
+    // p2 should be replaced by p3
+    assert.deepEqual(room.devForcedMafiaIds, [p3.id]);
+
+    room.startGame(host.id);
+
+    assert.equal(room.getPlayer(p3.id)?.role, 'MAFIA');
+    assert.equal(room.getPlayer(p2.id)?.role, 'CIVILIAN');
+
+    // Count total mafias in game: must be strictly 1
+    const totalMafia = [host, p2, p3, p4].filter((p) => room.getPlayer(p.id)?.role === 'MAFIA').length;
+    assert.equal(totalMafia, 1, 'Total mafia count must NOT increase');
+  });
+
+  it('strictly enforces 1 mafia in a 7-player game when 1 mafia option is selected and developer clicks 2 players', () => {
+    const room = new Room('SEVN');
+    const { player: host } = room.addPlayer('Host', createMockSocket());
+    const { player: p2 } = room.addPlayer('P2', createMockSocket());
+    const { player: p3 } = room.addPlayer('P3', createMockSocket());
+    const { player: p4 } = room.addPlayer('P4', createMockSocket());
+    const { player: p5 } = room.addPlayer('P5', createMockSocket());
+    const { player: p6 } = room.addPlayer('P6', createMockSocket());
+    const { player: p7 } = room.addPlayer('P7', createMockSocket());
+
+    // Host explicitly chooses 1 Mafia option (even though 7 players can support up to 2)
+    room.setMafiaCount(host.id, 1);
+    assert.equal(room.getMafiaCount(), 1);
+
+    // Developer taps P2 then P3
+    room.forceMafia(p2.id);
+    assert.deepEqual(room.devForcedMafiaIds, [p2.id]);
+
+    room.forceMafia(p3.id);
+    // P2 should be replaced by P3 because max mafia is 1
+    assert.deepEqual(room.devForcedMafiaIds, [p3.id]);
+
+    room.startGame(host.id);
+
+    // Verify P3 is Mafia and P2 is Civilian
+    assert.equal(room.getPlayer(p3.id)?.role, 'MAFIA');
+    assert.equal(room.getPlayer(p2.id)?.role, 'CIVILIAN');
+
+    // Verify exactly 1 Mafia across all 7 players
+    const allPlayers = [host, p2, p3, p4, p5, p6, p7];
+    const totalMafiaCount = allPlayers.filter((p) => room.getPlayer(p.id)?.role === 'MAFIA').length;
+    assert.equal(totalMafiaCount, 1, 'There must be strictly 1 Mafia');
+  });
+
+  it('turning off developer mode clears forced mafia selections back to random', () => {
+    const room = new Room('DEVCLR');
+    const { player: host } = room.addPlayer('Host', createMockSocket());
+    const { player: p2 } = room.addPlayer('P2', createMockSocket());
+    const { player: p3 } = room.addPlayer('P3', createMockSocket());
+    const { player: p4 } = room.addPlayer('P4', createMockSocket());
+
+    // Force P2 as mafia
+    room.forceMafia(p2.id);
+    assert.deepEqual(room.devForcedMafiaIds, [p2.id]);
+
+    // Developer turns off dev mode -> clears forced selection
+    room.clearForcedMafia();
+    assert.deepEqual(room.devForcedMafiaIds, []);
+
+    // Game starts with random assignment
+    room.startGame(host.id);
+    assert.equal(room.phase, 'ROLE_REVEAL');
+    assert.deepEqual(room.devForcedMafiaIds, []);
+  });
+
+  it('forced mafia is not persistent and only applies for one game', () => {
+    const room = new Room('ONEGAM');
+    const { player: host } = room.addPlayer('Host', createMockSocket());
+    const { player: p2 } = room.addPlayer('P2', createMockSocket());
+    const { player: p3 } = room.addPlayer('P3', createMockSocket());
+    const { player: p4 } = room.addPlayer('P4', createMockSocket());
+
+    // Game 1: Force P2 as mafia
+    room.forceMafia(p2.id);
+    assert.deepEqual(room.devForcedMafiaIds, [p2.id]);
+
+    room.startGame(host.id);
+    assert.equal(room.getPlayer(p2.id)?.role, 'MAFIA', 'Game 1 respects forced selection');
+    assert.deepEqual(room.devForcedMafiaIds, [], 'devForcedMafiaIds must be cleared upon game start');
+
+    // Return to lobby
+    room.resetToLobby(host.id);
+    assert.equal(room.phase, 'LOBBY');
+    assert.deepEqual(room.devForcedMafiaIds, [], 'devForcedMafiaIds must remain empty in lobby');
+
+    // Game 2: Start without developer forcing anyone
+    room.startGame(host.id);
+    assert.equal(room.phase, 'ROLE_REVEAL');
+    assert.deepEqual(room.devForcedMafiaIds, []);
+
+    // Total mafia is 1, but not locked to P2
+    const mafiaInGame2 = [host, p2, p3, p4].filter((p) => room.getPlayer(p.id)?.role === 'MAFIA');
+    assert.equal(mafiaInGame2.length, 1);
+  });
+
+  it('resetToLobby in lobby clears any pending forced mafia selections', () => {
+    const room = new Room('RSTCLR');
+    const { player: host } = room.addPlayer('Host', createMockSocket());
+    const { player: p2 } = room.addPlayer('P2', createMockSocket());
+    const { player: p3 } = room.addPlayer('P3', createMockSocket());
+    const { player: p4 } = room.addPlayer('P4', createMockSocket());
+
+    room.forceMafia(p3.id);
+    assert.deepEqual(room.devForcedMafiaIds, [p3.id]);
+
+    room.resetToLobby();
+    assert.deepEqual(room.devForcedMafiaIds, []);
+  });
+
+  it('allows Mafia to continuously complete night minigames without being counted for Proven Innocent', () => {
+    const room = new Room('MAFMIN');
+    const sentMafiaMsgs: any[] = [];
+    const socketMafia = {
+      readyState: WebSocket.OPEN,
+      send: (d: string) => sentMafiaMsgs.push(JSON.parse(d)),
+      close: () => {},
+      terminate: () => {}
+    } as unknown as WebSocket;
+
+    const { player: hostMafia } = room.addPlayer('HostMafia', socketMafia);
+    const { player: civ1 } = room.addPlayer('CivOne', createMockSocket());
+    const { player: civ2 } = room.addPlayer('CivTwo', createMockSocket());
+    const { player: civ3 } = room.addPlayer('CivThree', createMockSocket());
+
+    room.startGame(hostMafia.id);
+    room.getPlayer(hostMafia.id)!.role = 'MAFIA';
+    room.getPlayer(civ1.id)!.role = 'CIVILIAN';
+    room.getPlayer(civ2.id)!.role = 'CIVILIAN';
+    room.getPlayer(civ3.id)!.role = 'CIVILIAN';
+
+    room.startNight();
+
+    // Verify Mafia received initial MINIGAME_ASSIGNED
+    const initialAssignment = sentMafiaMsgs.find((m) => m.type === 'MINIGAME_ASSIGNED');
+    assert.ok(initialAssignment, 'Mafia must receive initial challenge at start of night');
+
+    // Mafia solves challenge 1
+    let mafiaChallenge = room.activeMinigames.get(hostMafia.id)!;
+    mafiaChallenge.validator = () => true;
+    assert.doesNotThrow(() => {
+      room.submitMinigameAction(hostMafia.id, mafiaChallenge.token, 1);
+    }, 'Mafia must be allowed to submit minigame actions without error');
+
+    // Verify Mafia received MINIGAME_RESULT with score 1 and next challenge
+    const resultMsg1 = sentMafiaMsgs.find((m) => m.type === 'MINIGAME_RESULT');
+    assert.ok(resultMsg1);
+    assert.equal(resultMsg1.passed, true);
+    assert.equal(resultMsg1.score, 1);
+
+    const assignedMsgs = sentMafiaMsgs.filter((m) => m.type === 'MINIGAME_ASSIGNED');
+    assert.equal(assignedMsgs.length, 2, 'Mafia must receive the next minigame challenge in loop');
+    assert.equal(assignedMsgs[1].score, 1);
+
+    // Mafia solves challenge 2 (total score 2)
+    mafiaChallenge = room.activeMinigames.get(hostMafia.id)!;
+    mafiaChallenge.validator = () => true;
+    room.submitMinigameAction(hostMafia.id, mafiaChallenge.token, 1);
+
+    // Civ 1 solves 1 challenge (score 1)
+    const civ1Challenge = room.activeMinigames.get(civ1.id)!;
+    civ1Challenge.validator = () => true;
+    room.submitMinigameAction(civ1.id, civ1Challenge.token, 1);
+
+    // Civ 2 also solves 1 challenge to survive safehouse
+    const civ2Challenge = room.activeMinigames.get(civ2.id)!;
+    civ2Challenge.validator = () => true;
+    room.submitMinigameAction(civ2.id, civ2Challenge.token, 1);
+
+    // Civ 3 also solves 1 challenge
+    const civ3Challenge = room.activeMinigames.get(civ3.id)!;
+    civ3Challenge.validator = () => true;
+    room.submitMinigameAction(civ3.id, civ3Challenge.token, 1);
+
+    // Resolve Night
+    room.resolveNight();
+
+    // Even though Mafia solved 2 challenges and Civ 1 solved 1,
+    // Top Defender MUST be a Civilian (civ1), never Mafia!
+    assert.ok(room.nightResult?.topDefender);
+    assert.notEqual(room.nightResult?.topDefender?.id, hostMafia.id, 'Mafia must NOT be Top Defender');
+    assert.equal(room.nightResult?.topDefender?.id, civ1.id);
+    assert.equal(room.provenCivilianIds.includes(hostMafia.id), false, 'Mafia must never be in provenCivilianIds');
+    assert.ok(room.provenCivilianIds.includes(civ1.id), 'Civ 1 should be proven innocent');
   });
 });
 

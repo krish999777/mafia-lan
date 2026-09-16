@@ -471,6 +471,20 @@ function handleClientMessage(ws: ExtendedWebSocket, msg: ClientMessage): void {
       break;
     }
 
+    case 'DEV_CLEAR_MAFIA': {
+      if (!ws.roomId || !ws.playerId) {
+        return sendError(ws, 'Not in an active room');
+      }
+
+      const room = roomManager.getRoom(ws.roomId);
+      if (!room) {
+        return sendError(ws, 'Room not found');
+      }
+
+      room.clearForcedMafia();
+      break;
+    }
+
     default:
       console.warn('[WS] Unhandled client message:', msg);
   }

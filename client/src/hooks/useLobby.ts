@@ -386,6 +386,10 @@ export function useLobby() {
     socketService.send({ type: 'DEV_FORCE_MAFIA', targetPlayerId });
   }, []);
 
+  const clearForcedMafia = useCallback(() => {
+    socketService.send({ type: 'DEV_CLEAR_MAFIA' });
+  }, []);
+
   return {
     isConnected,
     roomCode,
@@ -436,6 +440,7 @@ export function useLobby() {
     leaveRoom,
     dismissError,
     kickPlayer,
-    forceMafia
+    forceMafia,
+    clearForcedMafia
   };
 }

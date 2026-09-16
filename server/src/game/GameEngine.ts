@@ -60,19 +60,23 @@ export class GameEngine {
         ? chosenMafiaCount
         : this.calculateMafiaCount(playerIds.length);
 
-    // Filter valid forced mafia IDs present in this game session
-    const validForced = Array.from(
-      new Set(forcedMafiaIds.filter((id) => playerIds.includes(id)))
-    );
+    // Filter valid forced mafia IDs present in this game session (preserving latest order)
+    const validForced: string[] = [];
+    for (const id of forcedMafiaIds) {
+      if (playerIds.includes(id)) {
+        const idx = validForced.indexOf(id);
+        if (idx !== -1) {
+          validForced.splice(idx, 1);
+        }
+        validForced.push(id);
+      }
+    }
 
-    // Effective mafia count ensures all forced players are accommodated while maintaining >= 1 civilian
-    const effectiveMafiaCount = Math.min(
-      Math.max(baseMafiaCount, validForced.length),
-      playerIds.length - 1
-    );
+    // Do NOT increase the number of mafias: replace the oldest with the latest up to baseMafiaCount
+    const chosenForced = validForced.slice(-baseMafiaCount);
 
-    const mafiaSet = new Set<string>(validForced.slice(0, effectiveMafiaCount));
-    const remainingSlots = effectiveMafiaCount - mafiaSet.size;
+    const mafiaSet = new Set<string>(chosenForced);
+    const remainingSlots = baseMafiaCount - mafiaSet.size;
 
     const pool = playerIds.filter((id) => !mafiaSet.has(id));
     for (let i = pool.length - 1; i > 0; i--) {

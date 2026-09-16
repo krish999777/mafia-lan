@@ -387,6 +387,47 @@ describe('WebSocket Multi-Client Flow', () => {
     p4.close();
   });
 
+  it('clears forced mafia when DEV_CLEAR_MAFIA is sent', async () => {
+    const host = await connectClient();
+    const p2 = await connectClient();
+    const p3 = await connectClient();
+    const p4 = await connectClient();
+
+    const hostCreatedPromise = waitForMessage(host, 'ROOM_CREATED');
+    host.send(JSON.stringify({ type: 'CREATE_ROOM', name: 'HostAlice' } as ClientMessage));
+    const { roomCode } = (await hostCreatedPromise) as any;
+
+    const p2Join = waitForMessage(p2, 'ROOM_JOINED');
+    p2.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, name: 'Bob' } as ClientMessage));
+    await p2Join;
+
+    const p3Join = waitForMessage(p3, 'ROOM_JOINED');
+    p3.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, name: 'Charlie' } as ClientMessage));
+    const { playerId: p3Id } = (await p3Join) as any;
+
+    const p4Join = waitForMessage(p4, 'ROOM_JOINED');
+    p4.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, name: 'Dave' } as ClientMessage));
+    await p4Join;
+
+    const { roomManager } = await import('../room/RoomManager.js');
+    const room = roomManager.getRoom(roomCode)!;
+
+    // Force Charlie (p3)
+    p2.send(JSON.stringify({ type: 'DEV_FORCE_MAFIA', targetPlayerId: p3Id } as ClientMessage));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.deepEqual(room.devForcedMafiaIds, [p3Id]);
+
+    // Developer turns off dev mode -> sends DEV_CLEAR_MAFIA
+    p2.send(JSON.stringify({ type: 'DEV_CLEAR_MAFIA' } as ClientMessage));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.deepEqual(room.devForcedMafiaIds, []);
+
+    host.close();
+    p2.close();
+    p3.close();
+    p4.close();
+  });
+
   it('delivers MINIGAME_ASSIGNED to both Mafia and Civilians during Night for disguise', async () => {
     const host = await connectClient();
     const p2 = await connectClient();
@@ -439,6 +480,30 @@ describe('WebSocket Multi-Client Flow', () => {
     // Verify Civilian (p2) received minigame challenge
     assert.equal(p2Minigame.type, 'MINIGAME_ASSIGNED');
     assert.ok(p2Minigame.challenge.token);
+
+    // Verify Mafia (p3) can solve and submit minigame without error
+    const { roomManager } = await import('../room/RoomManager.js');
+    const room = roomManager.getRoom(roomCode)!;
+    const p3Active = room.activeMinigames.get(p3Id)!;
+    p3Active.validator = () => true;
+
+    const p3ResultPromise = waitForMessage(p3, 'MINIGAME_RESULT');
+    const p3NextChallengePromise = waitForMessage(p3, 'MINIGAME_ASSIGNED');
+
+    p3.send(JSON.stringify({
+      type: 'SUBMIT_MINIGAME_ACTION',
+      token: p3Minigame.challenge.token,
+      payload: 1
+    } as ClientMessage));
+
+    const p3Result = (await p3ResultPromise) as any;
+    const p3NextChallenge = (await p3NextChallengePromise) as any;
+
+    assert.equal(p3Result.type, 'MINIGAME_RESULT');
+    assert.equal(p3Result.passed, true);
+    assert.equal(p3Result.score, 1);
+    assert.equal(p3NextChallenge.type, 'MINIGAME_ASSIGNED');
+    assert.ok(p3NextChallenge.challenge.token);
 
     host.close();
     p2.close();

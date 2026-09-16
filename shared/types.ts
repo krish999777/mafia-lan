@@ -99,6 +99,7 @@ export type ClientMessage =
   | { type: 'LEAVE_ROOM' }
   | { type: 'KICK_PLAYER'; targetPlayerId: string }
   | { type: 'DEV_FORCE_MAFIA'; targetPlayerId: string }
+  | { type: 'DEV_CLEAR_MAFIA' }
   | { type: 'PING' };
 
 // Server -> Client messages

@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   const handleResetClick = () => {
     setSeqStage(0);
     setStageClicks(0);
-    if (isDevMode && onDevModeChange) {
+    if (onDevModeChange) {
       onDevModeChange(false);
     }
   };

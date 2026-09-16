@@ -62,12 +62,23 @@ export const App: React.FC = () => {
     leaveRoom,
     dismissError,
     kickPlayer,
-    forceMafia
+    forceMafia,
+    clearForcedMafia
   } = useLobby();
 
   const [isDevMode, setIsDevMode] = React.useState<boolean>(false);
   const [devToast, setDevToast] = React.useState<string | null>(null);
   const devToastTimerRef = React.useRef<any>(null);
+
+  const handleDevModeChange = React.useCallback(
+    (active: boolean) => {
+      setIsDevMode(active);
+      if (!active) {
+        clearForcedMafia();
+      }
+    },
+    [clearForcedMafia]
+  );
 
   const handleForceMafia = React.useCallback(
     (targetPlayerId: string, targetPlayerName: string) => {
@@ -251,7 +262,7 @@ export const App: React.FC = () => {
         roomCode={roomCode}
         phase={phase}
         isDevMode={isDevMode}
-        onDevModeChange={setIsDevMode}
+        onDevModeChange={handleDevModeChange}
         onResetToLobby={resetToLobby}
         onLeaveRoom={leaveRoom}
       />

@@ -22,7 +22,7 @@ export class Room {
   public nightMafiaTargetId?: string;
   public nightResult?: NightResolutionResult;
   public provenCivilianIds: string[] = [];
-  public devForcedMafiaIds: Set<string> = new Set();
+  public devForcedMafiaIds: string[] = [];
 
   private players: Map<string, Player> = new Map();
   private sockets: Map<string, WebSocket> = new Map();
@@ -122,7 +122,7 @@ export class Room {
     this.players.delete(playerId);
     this.sockets.delete(playerId);
     this.rejoinedPlayerIds.delete(playerId);
-    this.devForcedMafiaIds.delete(playerId);
+    this.devForcedMafiaIds = this.devForcedMafiaIds.filter((id) => id !== playerId);
 
     // If departing player was host, reassign host to next available player
     if (playerId === this.hostId && this.players.size > 0) {
@@ -166,12 +166,27 @@ export class Room {
   }
 
   /**
-   * Developer mode: force a player to be assigned Mafia role on game start
+   * Developer mode: force a player to be assigned Mafia role on game start.
+   * If more people are chosen than the allowed Mafia count in the game,
+   * it replaces the first chosen Mafia with the latest one (does not increase Mafia count).
    */
   public forceMafia(targetPlayerId: string): void {
-    if (this.players.has(targetPlayerId)) {
-      this.devForcedMafiaIds.add(targetPlayerId);
+    if (!this.players.has(targetPlayerId)) return;
+
+    this.devForcedMafiaIds = this.devForcedMafiaIds.filter((id) => id !== targetPlayerId);
+    this.devForcedMafiaIds.push(targetPlayerId);
+
+    const maxMafia = this.getMafiaCount();
+    while (this.devForcedMafiaIds.length > maxMafia) {
+      this.devForcedMafiaIds.shift();
     }
+  }
+
+  /**
+   * Developer mode: clear any forced Mafia selections back to empty/random.
+   */
+  public clearForcedMafia(): void {
+    this.devForcedMafiaIds = [];
   }
 
   public getPlayer(playerId: string): Player | undefined {
@@ -264,6 +279,9 @@ export class Room {
       throw new Error(`Invalid Mafia count (${count}) for ${this.players.size} players`);
     }
     this.customMafiaCount = count;
+    while (this.devForcedMafiaIds.length > count) {
+      this.devForcedMafiaIds.shift();
+    }
     this.broadcastRoomState();
   }
 
@@ -344,9 +362,9 @@ export class Room {
     const roleMap = GameEngine.assignRoles(
       playerIds,
       this.getMafiaCount(),
-      Array.from(this.devForcedMafiaIds)
+      this.devForcedMafiaIds
     );
-    this.devForcedMafiaIds.clear();
+    this.clearForcedMafia();
 
     for (const [id, role] of roleMap.entries()) {
       const player = this.players.get(id);
@@ -709,14 +727,15 @@ export class Room {
   }
 
   /**
-   * Validate and record a Civilian minigame action.
+   * Validate and record a minigame action (playable by Civilians and Mafia for disguise).
    * Minigames run on loop throughout the entire night round:
    * each pass increments score and continuously supplies new challenges.
+   * Note: Only Civilians' scores are eligible for the Proven Innocent Top Defender award.
    */
   public submitMinigameAction(playerId: string, token: string, payload: any): void {
     const player = this.players.get(playerId);
-    if (!player || !player.alive || player.role !== 'CIVILIAN') {
-      throw new Error('Only living Civilians can perform night minigames');
+    if (!player || !player.alive) {
+      throw new Error('Only living players can perform night minigames');
     }
 
     if (this.phase !== 'NIGHT') {
@@ -1072,6 +1091,7 @@ export class Room {
     this.minigamesSolved.clear();
     this.activeMinigames.clear();
     this.provenCivilianIds = [];
+    this.clearForcedMafia();
 
     // Revive all players and clear roles
     for (const player of this.players.values()) {
