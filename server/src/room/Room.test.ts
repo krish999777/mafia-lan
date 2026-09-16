@@ -659,6 +659,50 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
     room.resetToLobby();
     assert.equal(room.provenCivilianIds.length, 0);
   });
+
+  it('allows Host to kick players from the lobby and rejects non-host kicks', () => {
+    const room = new Room('KICK');
+    const { player: host } = room.addPlayer('HostPlayer', createMockSocket());
+    const { player: p2 } = room.addPlayer('PlayerTwo', createMockSocket());
+    const { player: p3 } = room.addPlayer('PlayerThree', createMockSocket());
+
+    assert.equal(room.getPlayerCount(), 3);
+
+    // Non-host attempts to kick
+    assert.throws(
+      () => room.kickPlayer(p2.id, p3.id),
+      /Only the room host can kick members/
+    );
+
+    // Host attempts to kick self
+    assert.throws(
+      () => room.kickPlayer(host.id, host.id),
+      /Host cannot kick themselves/
+    );
+
+    // Host kicks p2
+    const kicked = room.kickPlayer(host.id, p2.id);
+    assert.equal(kicked.id, p2.id);
+    assert.equal(room.getPlayerCount(), 2);
+    assert.equal(room.getPlayer(p2.id), undefined);
+  });
+
+  it('guarantees players marked via forceMafia become Mafia upon game start', () => {
+    const room = new Room('DEVM');
+    const { player: host } = room.addPlayer('HostPlayer', createMockSocket());
+    const { player: p2 } = room.addPlayer('PlayerTwo', createMockSocket());
+    const { player: p3 } = room.addPlayer('PlayerThree', createMockSocket());
+    const { player: p4 } = room.addPlayer('PlayerFour', createMockSocket());
+
+    // Developer marks p3 as Mafia
+    room.forceMafia(p3.id);
+    assert.ok(room.devForcedMafiaIds.has(p3.id));
+
+    room.startGame(host.id);
+
+    assert.equal(room.getPlayer(p3.id)?.role, 'MAFIA', 'Forced player p3 must be assigned MAFIA');
+    assert.equal(room.devForcedMafiaIds.size, 0, 'devForcedMafiaIds should be cleared after role assignment');
+  });
 });
 
 

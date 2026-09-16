@@ -198,6 +198,11 @@ body::before {
   background-color: var(--accent-crimson);
 }
 
+.connection-dot.developer-mode {
+  background-color: #facc15;
+  box-shadow: 0 0 10px #facc15;
+}
+
 /* Glass Card */
 .glass-card {
   background: var(--bg-card);
@@ -546,6 +551,54 @@ body::before {
   max-width: 90vw;
   font-size: 0.9rem;
   animation: slideUp 0.2s ease-out;
+}
+
+/* Toast developer mode - secret feedback showing only player name */
+.toast-dev {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(18, 22, 36, 0.96);
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  padding: 0.55rem 1.4rem;
+  border-radius: var(--radius-full);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+  z-index: 3000;
+  max-width: 90vw;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+  animation: slideUp 0.2s ease-out;
+}
+
+/* Host Kick Button in Lobby */
+.kick-member-btn {
+  background: rgba(230, 57, 70, 0.12);
+  color: #ff6b6b;
+  border: 1px solid rgba(230, 57, 70, 0.35);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.22rem 0.6rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.kick-member-btn:hover {
+  background: rgba(230, 57, 70, 0.3);
+  border-color: #e63946;
+  color: #fff;
+  transform: scale(1.04);
+}
+
+.kick-member-btn:active {
+  transform: scale(0.96);
 }
 
 @keyframes fadeIn {

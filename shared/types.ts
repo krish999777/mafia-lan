@@ -97,6 +97,8 @@ export type ClientMessage =
   | { type: 'FORCE_RESOLVE_DAWN' }
   | { type: 'RECONNECT'; roomCode: string; playerId: string }
   | { type: 'LEAVE_ROOM' }
+  | { type: 'KICK_PLAYER'; targetPlayerId: string }
+  | { type: 'DEV_FORCE_MAFIA'; targetPlayerId: string }
   | { type: 'PING' };
 
 // Server -> Client messages
@@ -151,6 +153,7 @@ export type ServerMessage =
   | { type: 'PLAYER_JOINED'; player: PlayerSummary }
   | { type: 'PLAYER_LEFT'; playerId: string }
   | { type: 'PLAYER_STATUS_CHANGED'; playerId: string; connected: boolean }
+  | { type: 'KICKED'; message?: string }
   | { type: 'ERROR'; message: string; code?: string }
   | { type: 'PONG' };
 

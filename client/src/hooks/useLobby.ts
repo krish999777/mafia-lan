@@ -248,6 +248,16 @@ export function useLobby() {
           }
           break;
 
+        case 'KICKED':
+          storage.clearRoom();
+          setRoomCode(null);
+          setPlayerId(null);
+          setIsHost(false);
+          setPlayers([]);
+          setPhase('LOBBY');
+          setError(msg.message || 'You have been removed from the lobby by the host.');
+          break;
+
         case 'ERROR':
           setError(msg.message);
           setIsJoining(false);
@@ -368,6 +378,14 @@ export function useLobby() {
     setError(null);
   }, []);
 
+  const kickPlayer = useCallback((targetPlayerId: string) => {
+    socketService.send({ type: 'KICK_PLAYER', targetPlayerId });
+  }, []);
+
+  const forceMafia = useCallback((targetPlayerId: string) => {
+    socketService.send({ type: 'DEV_FORCE_MAFIA', targetPlayerId });
+  }, []);
+
   return {
     isConnected,
     roomCode,
@@ -416,6 +434,8 @@ export function useLobby() {
     forceResolveNight,
     forceResolveDawn,
     leaveRoom,
-    dismissError
+    dismissError,
+    kickPlayer,
+    forceMafia
   };
 }

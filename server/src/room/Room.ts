@@ -22,6 +22,7 @@ export class Room {
   public nightMafiaTargetId?: string;
   public nightResult?: NightResolutionResult;
   public provenCivilianIds: string[] = [];
+  public devForcedMafiaIds: Set<string> = new Set();
 
   private players: Map<string, Player> = new Map();
   private sockets: Map<string, WebSocket> = new Map();
@@ -121,6 +122,7 @@ export class Room {
     this.players.delete(playerId);
     this.sockets.delete(playerId);
     this.rejoinedPlayerIds.delete(playerId);
+    this.devForcedMafiaIds.delete(playerId);
 
     // If departing player was host, reassign host to next available player
     if (playerId === this.hostId && this.players.size > 0) {
@@ -140,6 +142,36 @@ export class Room {
     }
 
     return true;
+  }
+
+  /**
+   * Host kicks a player from the lobby
+   */
+  public kickPlayer(callerId: string, targetPlayerId: string): Player {
+    if (callerId !== this.hostId) {
+      throw new Error('Only the room host can kick members');
+    }
+    if (this.phase !== 'LOBBY') {
+      throw new Error('Players can only be kicked in the lobby');
+    }
+    if (targetPlayerId === this.hostId) {
+      throw new Error('Host cannot kick themselves');
+    }
+    const player = this.players.get(targetPlayerId);
+    if (!player) {
+      throw new Error('Player not found in this room');
+    }
+    this.removePlayer(targetPlayerId);
+    return player;
+  }
+
+  /**
+   * Developer mode: force a player to be assigned Mafia role on game start
+   */
+  public forceMafia(targetPlayerId: string): void {
+    if (this.players.has(targetPlayerId)) {
+      this.devForcedMafiaIds.add(targetPlayerId);
+    }
   }
 
   public getPlayer(playerId: string): Player | undefined {
@@ -307,9 +339,14 @@ export class Room {
     this.activeMinigames.clear();
     this.provenCivilianIds = [];
 
-    // Assign roles using GameEngine with host-chosen or balanced mafia count
+    // Assign roles using GameEngine with host-chosen or balanced mafia count, respecting any dev-forced mafia
     const playerIds = Array.from(this.players.keys());
-    const roleMap = GameEngine.assignRoles(playerIds, this.getMafiaCount());
+    const roleMap = GameEngine.assignRoles(
+      playerIds,
+      this.getMafiaCount(),
+      Array.from(this.devForcedMafiaIds)
+    );
+    this.devForcedMafiaIds.clear();
 
     for (const [id, role] of roleMap.entries()) {
       const player = this.players.get(id);

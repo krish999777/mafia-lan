@@ -42,33 +42,53 @@ export class GameEngine {
   /**
    * Randomly assigns roles to a list of player IDs using Fisher-Yates shuffle.
    * Optionally accepts a host-chosen mafiaCount if valid for player size.
+   * Optionally accepts forcedMafiaIds to guarantee specific players are Mafia.
    * Returns a Map of playerId -> Role.
    */
-  public static assignRoles(playerIds: string[], chosenMafiaCount?: number): Map<string, Role> {
+  public static assignRoles(
+    playerIds: string[],
+    chosenMafiaCount?: number,
+    forcedMafiaIds: string[] = []
+  ): Map<string, Role> {
     if (playerIds.length < this.MIN_PLAYERS || playerIds.length > this.MAX_PLAYERS) {
       throw new Error(`Cannot start game: player count must be between ${this.MIN_PLAYERS} and ${this.MAX_PLAYERS}`);
     }
 
     const validOptions = this.calculateMafiaOptions(playerIds.length);
-    const mafiaCount =
+    const baseMafiaCount =
       chosenMafiaCount !== undefined && validOptions.includes(chosenMafiaCount)
         ? chosenMafiaCount
         : this.calculateMafiaCount(playerIds.length);
 
-    const shuffled = [...playerIds];
-    for (let i = shuffled.length - 1; i > 0; i--) {
+    // Filter valid forced mafia IDs present in this game session
+    const validForced = Array.from(
+      new Set(forcedMafiaIds.filter((id) => playerIds.includes(id)))
+    );
+
+    // Effective mafia count ensures all forced players are accommodated while maintaining >= 1 civilian
+    const effectiveMafiaCount = Math.min(
+      Math.max(baseMafiaCount, validForced.length),
+      playerIds.length - 1
+    );
+
+    const mafiaSet = new Set<string>(validForced.slice(0, effectiveMafiaCount));
+    const remainingSlots = effectiveMafiaCount - mafiaSet.size;
+
+    const pool = playerIds.filter((id) => !mafiaSet.has(id));
+    for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      const temp = shuffled[i];
-      shuffled[i] = shuffled[j];
-      shuffled[j] = temp;
+      const temp = pool[i];
+      pool[i] = pool[j];
+      pool[j] = temp;
+    }
+
+    for (let i = 0; i < remainingSlots; i++) {
+      mafiaSet.add(pool[i]);
     }
 
     const roleMap = new Map<string, Role>();
-
-    for (let i = 0; i < shuffled.length; i++) {
-      const pid = shuffled[i];
-      const role: Role = i < mafiaCount ? 'MAFIA' : 'CIVILIAN';
-      roleMap.set(pid, role);
+    for (const pid of playerIds) {
+      roleMap.set(pid, mafiaSet.has(pid) ? 'MAFIA' : 'CIVILIAN');
     }
 
     return roleMap;

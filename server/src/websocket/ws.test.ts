@@ -319,4 +319,71 @@ describe('WebSocket Multi-Client Flow', () => {
     p3.close();
     p4.close();
   });
+
+  it('allows Host to kick a member over WebSocket and informs the kicked player', async () => {
+    const host = await connectClient();
+    const p2 = await connectClient();
+
+    const hostCreatedPromise = waitForMessage(host, 'ROOM_CREATED');
+    host.send(JSON.stringify({ type: 'CREATE_ROOM', name: 'HostAlice' } as ClientMessage));
+    const { roomCode } = (await hostCreatedPromise) as any;
+
+    const p2Join = waitForMessage(p2, 'ROOM_JOINED');
+    p2.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, name: 'Bob' } as ClientMessage));
+    const { playerId: p2Id } = (await p2Join) as any;
+
+    const kickedPromise = waitForMessage(p2, 'KICKED');
+    const playerLeftPromise = waitForMessage(host, 'PLAYER_LEFT');
+
+    host.send(JSON.stringify({ type: 'KICK_PLAYER', targetPlayerId: p2Id } as ClientMessage));
+
+    const kickedMsg = (await kickedPromise) as any;
+    const playerLeftMsg = (await playerLeftPromise) as any;
+
+    assert.equal(kickedMsg.type, 'KICKED');
+    assert.equal(playerLeftMsg.playerId, p2Id);
+
+    host.close();
+    p2.close();
+  });
+
+  it('guarantees player marked via DEV_FORCE_MAFIA receives Mafia role over WebSocket', async () => {
+    const host = await connectClient();
+    const p2 = await connectClient();
+    const p3 = await connectClient();
+    const p4 = await connectClient();
+
+    const hostCreatedPromise = waitForMessage(host, 'ROOM_CREATED');
+    host.send(JSON.stringify({ type: 'CREATE_ROOM', name: 'HostAlice' } as ClientMessage));
+    const { roomCode } = (await hostCreatedPromise) as any;
+
+    const p2Join = waitForMessage(p2, 'ROOM_JOINED');
+    p2.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, name: 'Bob' } as ClientMessage));
+    await p2Join;
+
+    const p3Join = waitForMessage(p3, 'ROOM_JOINED');
+    p3.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, name: 'Charlie' } as ClientMessage));
+    const { playerId: p3Id } = (await p3Join) as any;
+
+    const p4Join = waitForMessage(p4, 'ROOM_JOINED');
+    p4.send(JSON.stringify({ type: 'JOIN_ROOM', roomCode, name: 'Dave' } as ClientMessage));
+    await p4Join;
+
+    // Bob activates dev mode and forces Charlie (p3) to be Mafia
+    p2.send(JSON.stringify({ type: 'DEV_FORCE_MAFIA', targetPlayerId: p3Id } as ClientMessage));
+
+    // Wait a brief tick for message processing
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const p3RolePromise = waitForMessage(p3, 'ROLE_ASSIGNED');
+    host.send(JSON.stringify({ type: 'START_GAME' } as ClientMessage));
+
+    const p3Role = (await p3RolePromise) as any;
+    assert.equal(p3Role.role, 'MAFIA', 'Forced player Charlie must receive MAFIA role');
+
+    host.close();
+    p2.close();
+    p3.close();
+    p4.close();
+  });
 });

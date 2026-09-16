@@ -131,6 +131,22 @@ describe('GameEngine — Role Assignment & Balancing', () => {
       );
     }
   });
+
+  it('guarantees specified players receive Mafia when forcedMafiaIds is supplied', () => {
+    const players = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6'];
+
+    // Run 50 times to prove deterministic guarantee
+    for (let i = 0; i < 50; i++) {
+      const roles = GameEngine.assignRoles(players, 1, ['p3']);
+      assert.equal(roles.get('p3'), 'MAFIA');
+      assert.equal(roles.get('p1'), 'CIVILIAN');
+    }
+
+    // Multiple forced mafia
+    const multiRoles = GameEngine.assignRoles(players, 2, ['p2', 'p5']);
+    assert.equal(multiRoles.get('p2'), 'MAFIA');
+    assert.equal(multiRoles.get('p5'), 'MAFIA');
+  });
 });
 
 describe('GameEngine — Vote Tallying & Elimination', () => {

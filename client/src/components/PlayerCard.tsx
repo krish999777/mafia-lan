@@ -5,13 +5,24 @@ interface PlayerCardProps {
   player: PlayerSummary;
   isCurrentPlayer: boolean;
   isProvenCivilian?: boolean;
+  onKick?: () => void;
+  onClick?: () => void;
 }
 
-export const PlayerCard: React.FC<PlayerCardProps> = ({ player, isCurrentPlayer, isProvenCivilian = false }) => {
+export const PlayerCard: React.FC<PlayerCardProps> = ({
+  player,
+  isCurrentPlayer,
+  isProvenCivilian = false,
+  onKick,
+  onClick
+}) => {
   const initial = player.name ? player.name.charAt(0).toUpperCase() : '?';
 
   return (
-    <div className={`player-item ${isCurrentPlayer ? 'is-me' : ''} ${isProvenCivilian ? 'is-proven-civilian' : ''}`}>
+    <div
+      className={`player-item ${isCurrentPlayer ? 'is-me' : ''} ${isProvenCivilian ? 'is-proven-civilian' : ''}`}
+      onClick={onClick}
+    >
       <div className="player-info">
         <div className="player-avatar">{initial}</div>
         <div>
@@ -24,12 +35,27 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({ player, isCurrentPlayer,
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-        <span
-          className={`connection-dot ${player.connected ? 'online' : 'offline'}`}
-          style={{ width: '6px', height: '6px' }}
-        />
-        <span>{player.connected ? 'Ready' : 'Away'}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.75rem', color: 'var(--text-dim)' }}>
+        {onKick && (
+          <button
+            type="button"
+            className="kick-member-btn"
+            title={`Kick ${player.name}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onKick();
+            }}
+          >
+            ✕ Kick
+          </button>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          <span
+            className={`connection-dot ${player.connected ? 'online' : 'offline'}`}
+            style={{ width: '6px', height: '6px' }}
+          />
+          <span>{player.connected ? 'Ready' : 'Away'}</span>
+        </div>
       </div>
     </div>
   );

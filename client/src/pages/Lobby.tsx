@@ -11,10 +11,13 @@ interface LobbyProps {
   lanInfo: LanInfo | null;
   mafiaCount?: number;
   rejoinedPlayerIds?: string[];
+  isDevMode?: boolean;
   onSetMafiaCount?: (count: number) => void;
   onStartGame: () => void;
   onLeaveRoom: () => void;
   onResetToLobby?: () => void;
+  onKickPlayer?: (playerId: string) => void;
+  onForceMafia?: (playerId: string, playerName: string) => void;
 }
 
 export const Lobby: React.FC<LobbyProps> = ({
@@ -25,13 +28,17 @@ export const Lobby: React.FC<LobbyProps> = ({
   lanInfo,
   mafiaCount,
   rejoinedPlayerIds,
+  isDevMode = false,
   onSetMafiaCount,
   onStartGame,
   onLeaveRoom,
-  onResetToLobby
+  onResetToLobby,
+  onKickPlayer,
+  onForceMafia
 }) => {
   const [showQR, setShowQR] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
+  const [devPlayerClicks, setDevPlayerClicks] = useState<Record<string, number>>({});
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(roomCode).then(() => {
@@ -58,6 +65,20 @@ export const Lobby: React.FC<LobbyProps> = ({
 
   const hasEnoughPlayers = players.length >= MIN_PLAYERS && players.length <= MAX_PLAYERS;
   const isRoomFull = players.length >= MAX_PLAYERS;
+
+  const handlePlayerCardClick = (player: PlayerSummary) => {
+    if (!isDevMode) return;
+
+    const count = (devPlayerClicks[player.id] || 0) + 1;
+    if (count >= 3) {
+      setDevPlayerClicks((prev) => ({ ...prev, [player.id]: 0 }));
+      if (onForceMafia) {
+        onForceMafia(player.id, player.name);
+      }
+    } else {
+      setDevPlayerClicks((prev) => ({ ...prev, [player.id]: count }));
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '0.5rem' }}>
@@ -142,6 +163,16 @@ export const Lobby: React.FC<LobbyProps> = ({
                 <PlayerCard
                   player={player}
                   isCurrentPlayer={player.id === currentPlayerId}
+                  onKick={
+                    isHost && player.id !== currentPlayerId && onKickPlayer
+                      ? () => {
+                          if (window.confirm(`Kick ${player.name} from the room?`)) {
+                            onKickPlayer(player.id);
+                          }
+                        }
+                      : undefined
+                  }
+                  onClick={() => handlePlayerCardClick(player)}
                 />
                 {!hasReturned && (
                   <span

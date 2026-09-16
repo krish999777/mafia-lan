@@ -423,6 +423,54 @@ function handleClientMessage(ws: ExtendedWebSocket, msg: ClientMessage): void {
       break;
     }
 
+    case 'KICK_PLAYER': {
+      if (!ws.roomId || !ws.playerId) {
+        return sendError(ws, 'Not in an active room');
+      }
+
+      const room = roomManager.getRoom(ws.roomId);
+      if (!room) {
+        return sendError(ws, 'Room not found');
+      }
+
+      try {
+        const targetSocket = room.getPlayerSocket(msg.targetPlayerId) as ExtendedWebSocket | undefined;
+        room.kickPlayer(ws.playerId, msg.targetPlayerId);
+
+        if (targetSocket) {
+          sendMessage(targetSocket, {
+            type: 'KICKED',
+            message: 'You have been removed from the lobby by the host.'
+          });
+          targetSocket.roomId = undefined;
+          targetSocket.playerId = undefined;
+        }
+
+        room.broadcast({
+          type: 'PLAYER_LEFT',
+          playerId: msg.targetPlayerId
+        });
+        room.broadcastRoomState();
+      } catch (err: any) {
+        sendError(ws, err.message || 'Failed to kick player');
+      }
+      break;
+    }
+
+    case 'DEV_FORCE_MAFIA': {
+      if (!ws.roomId || !ws.playerId) {
+        return sendError(ws, 'Not in an active room');
+      }
+
+      const room = roomManager.getRoom(ws.roomId);
+      if (!room) {
+        return sendError(ws, 'Room not found');
+      }
+
+      room.forceMafia(msg.targetPlayerId);
+      break;
+    }
+
     default:
       console.warn('[WS] Unhandled client message:', msg);
   }

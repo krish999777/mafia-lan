@@ -60,8 +60,28 @@ export const App: React.FC = () => {
     forceResolveNight,
     forceResolveDawn,
     leaveRoom,
-    dismissError
+    dismissError,
+    kickPlayer,
+    forceMafia
   } = useLobby();
+
+  const [isDevMode, setIsDevMode] = React.useState<boolean>(false);
+  const [devToast, setDevToast] = React.useState<string | null>(null);
+  const devToastTimerRef = React.useRef<any>(null);
+
+  const handleForceMafia = React.useCallback(
+    (targetPlayerId: string, targetPlayerName: string) => {
+      forceMafia(targetPlayerId);
+      setDevToast(targetPlayerName);
+      if (devToastTimerRef.current) {
+        clearTimeout(devToastTimerRef.current);
+      }
+      devToastTimerRef.current = setTimeout(() => {
+        setDevToast(null);
+      }, 2000);
+    },
+    [forceMafia]
+  );
 
   // Route according to active room and server-authoritative phase
   const renderContent = () => {
@@ -212,10 +232,13 @@ export const App: React.FC = () => {
             lanInfo={lanInfo}
             mafiaCount={mafiaCount}
             rejoinedPlayerIds={rejoinedPlayerIds}
+            isDevMode={isDevMode}
             onSetMafiaCount={setMafiaCount}
             onStartGame={startGame}
             onLeaveRoom={leaveRoom}
             onResetToLobby={resetToLobby}
+            onKickPlayer={kickPlayer}
+            onForceMafia={handleForceMafia}
           />
         );
     }
@@ -227,11 +250,20 @@ export const App: React.FC = () => {
         isConnected={isConnected}
         roomCode={roomCode}
         phase={phase}
+        isDevMode={isDevMode}
+        onDevModeChange={setIsDevMode}
         onResetToLobby={resetToLobby}
         onLeaveRoom={leaveRoom}
       />
 
       {renderContent()}
+
+      {/* Developer Mode Feedback Toast: ONLY displays the person's name with no visual changes */}
+      {devToast && (
+        <div className="toast-dev">
+          <span>{devToast}</span>
+        </div>
+      )}
 
       {/* Error Toast */}
       {error && (
