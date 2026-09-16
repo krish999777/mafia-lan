@@ -643,8 +643,8 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
 
     // Civ 3 fails / solves 0 minigames (will disappear due to breached safehouse)
 
-    // Resolve night
-    room.resolveNight();
+    // Resolve night with deterministic proven innocent roll (< 0.5)
+    room.resolveNight(undefined, 0.1);
 
     // Verify StarCiv (C1) is identified as Top Defender and proven innocent!
     assert.ok(room.nightResult?.topDefender);
@@ -896,8 +896,8 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
     civ3Challenge.validator = () => true;
     room.submitMinigameAction(civ3.id, civ3Challenge.token, 1);
 
-    // Resolve Night
-    room.resolveNight();
+    // Resolve Night with deterministic proven innocent roll (< 0.5)
+    room.resolveNight(undefined, 0.1);
 
     // Even though Mafia solved 2 challenges and Civ 1 solved 1,
     // Top Defender MUST be a Civilian (civ1), never Mafia!
@@ -906,6 +906,60 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
     assert.equal(room.nightResult?.topDefender?.id, civ1.id);
     assert.equal(room.provenCivilianIds.includes(hostMafia.id), false, 'Mafia must never be in provenCivilianIds');
     assert.ok(room.provenCivilianIds.includes(civ1.id), 'Civ 1 should be proven innocent');
+  });
+
+  it('only reveals Proven Innocent 50% of the time based on probability roll', () => {
+    const helperSetup = () => {
+      const room = new Room('PROVEN50');
+      const h = room.addPlayer('Host', createMockSocket());
+      const c1 = room.addPlayer('Civ1', createMockSocket());
+      const c2 = room.addPlayer('Civ2', createMockSocket());
+      const c3 = room.addPlayer('Civ3', createMockSocket());
+      room.startGame(h.id);
+      room.phase = 'NIGHT';
+      // All civilians solve 1 minigame so they survive safehouse defense
+      for (const civ of [c1, c2, c3]) {
+        const p = room.getPlayer(civ.id)!;
+        p.role = 'CIVILIAN';
+        const ch = room.activeMinigames.get(civ.id)!;
+        ch.validator = () => true;
+        room.submitMinigameAction(civ.id, ch.token, 1);
+      }
+      return { room, c1 };
+    };
+
+    // Case 1: Roll < 0.5 -> Proven Innocent is selected
+    const { room: roomHit, c1: c1Hit } = helperSetup();
+    roomHit.resolveNight(undefined, 0.25);
+    assert.ok(roomHit.nightResult?.topDefender, 'Top Defender should be revealed when roll < 0.5');
+    assert.ok(roomHit.provenCivilianIds.length > 0, 'Civilians should be added to provenCivilianIds');
+
+    // Case 2: Roll >= 0.5 -> Proven Innocent is suppressed
+    const { room: roomMiss } = helperSetup();
+    roomMiss.resolveNight(undefined, 0.75);
+    assert.equal(roomMiss.nightResult?.topDefender, undefined, 'Top Defender must be undefined when roll >= 0.5');
+    assert.equal(roomMiss.provenCivilianIds.length, 0, 'provenCivilianIds must remain empty when roll >= 0.5');
+
+    // Case 3: Exactly 0.5 -> Suppressed
+    const { room: roomBoundary } = helperSetup();
+    roomBoundary.resolveNight(undefined, 0.5);
+    assert.equal(roomBoundary.nightResult?.topDefender, undefined, 'Top Defender must be undefined at exact boundary 0.5');
+    assert.equal(roomBoundary.provenCivilianIds.length, 0);
+
+    // Case 4: Statistical verification with default Math.random()
+    let chosenCount = 0;
+    const TRIALS = 200;
+    for (let i = 0; i < TRIALS; i++) {
+      const { room } = helperSetup();
+      room.resolveNight(); // Uses Math.random()
+      if (room.nightResult?.topDefender) {
+        chosenCount++;
+      }
+    }
+    const ratio = chosenCount / TRIALS;
+    // Over 200 trials with p=0.5, standard deviation is sqrt(200*0.25) ~ 7.07, 3 std devs is ~21 (0.395 - 0.605).
+    // A tolerance of [0.35, 0.65] is extremely safe (>4 std devs).
+    assert.ok(ratio >= 0.35 && ratio <= 0.65, `Expected ~0.5 ratio, got ${ratio} (${chosenCount}/${TRIALS})`);
   });
 
   it('returns all active lobbies sorted from latest to oldest with accurate player counts', () => {

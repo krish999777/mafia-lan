@@ -4,6 +4,8 @@ import { GameEngine } from '../game/GameEngine.js';
 import { MinigameEngine } from '../minigames/MinigameEngine.js';
 
 export class Room {
+  public static readonly PROVEN_INNOCENT_CHANCE = 0.5;
+
   public readonly roomCode: string;
   public hostId: string = '';
   public phase: GamePhase = 'LOBBY';
@@ -796,9 +798,9 @@ export class Room {
   /**
    * Resolve night actions, transition to NIGHT_RESOLUTION, and announce concealed deaths.
    * Mafia only kills if unanimous consensus was achieved.
-   * Top Defender among surviving civilians is revealed as Proven Innocent!
+   * Top Defender among surviving civilians is revealed as Proven Innocent (only 50% of the time).
    */
-  public resolveNight(callerId?: string): void {
+  public resolveNight(callerId?: string, forceProvenRoll?: number): void {
     if (callerId && callerId !== this.hostId) {
       throw new Error('Only the room host can resolve Night');
     }
@@ -831,28 +833,33 @@ export class Room {
       }
     }
 
-    // 3. Identify Top Defender among surviving living civilians
-    const survivingCivilians = Array.from(this.players.values()).filter(
-      (p) => p.alive && p.role === 'CIVILIAN'
-    );
+    // 3. Identify Top Defender among surviving living civilians (only 50% of the time)
+    const provenRoll = forceProvenRoll !== undefined ? forceProvenRoll : Math.random();
+    const isProvenInnocentSelected = provenRoll < Room.PROVEN_INNOCENT_CHANCE;
 
     let topDefender: { id: string; name: string; score: number } | undefined = undefined;
-    let highestScore = 0;
 
-    for (const civ of survivingCivilians) {
-      const score = (this.minigamesSolved.get(civ.id) || 0) || (this.minigameResults.get(civ.id) === true ? 1 : 0);
-      if (score > highestScore) {
-        highestScore = score;
-        topDefender = { id: civ.id, name: civ.name, score };
-      }
-    }
+    if (isProvenInnocentSelected) {
+      const survivingCivilians = Array.from(this.players.values()).filter(
+        (p) => p.alive && p.role === 'CIVILIAN'
+      );
 
-    if (topDefender && topDefender.score > 0) {
-      if (!this.provenCivilianIds.includes(topDefender.id)) {
-        this.provenCivilianIds.push(topDefender.id);
+      let highestScore = 0;
+      for (const civ of survivingCivilians) {
+        const score = (this.minigamesSolved.get(civ.id) || 0) || (this.minigameResults.get(civ.id) === true ? 1 : 0);
+        if (score > highestScore) {
+          highestScore = score;
+          topDefender = { id: civ.id, name: civ.name, score };
+        }
       }
-    } else {
-      topDefender = undefined;
+
+      if (topDefender && topDefender.score > 0) {
+        if (!this.provenCivilianIds.includes(topDefender.id)) {
+          this.provenCivilianIds.push(topDefender.id);
+        }
+      } else {
+        topDefender = undefined;
+      }
     }
 
     // Clear active night challenge state
