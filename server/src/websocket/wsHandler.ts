@@ -9,7 +9,24 @@ interface ExtendedWebSocket extends WebSocket {
   playerId?: string;
 }
 
+let activeWss: WebSocketServer | null = null;
+
+export function broadcastLobbyList(): void {
+  if (!activeWss) return;
+  const payload = JSON.stringify({
+    type: 'LOBBY_LIST',
+    lobbies: roomManager.getAllLobbies()
+  } as ServerMessage);
+
+  activeWss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+    }
+  });
+}
+
 export function setupWebSocket(wss: WebSocketServer): void {
+  activeWss = wss;
   // Connection heartbeat check
   const heartbeatInterval = setInterval(() => {
     wss.clients.forEach((ws) => {
@@ -84,6 +101,7 @@ function handleClientMessage(ws: ExtendedWebSocket, msg: ClientMessage): void {
 
         // Send full initial room state
         room.sendRoomState(player.id);
+        broadcastLobbyList();
       } catch (err: any) {
         sendError(ws, err.message || 'Failed to create room');
       }
@@ -102,6 +120,7 @@ function handleClientMessage(ws: ExtendedWebSocket, msg: ClientMessage): void {
 
       try {
         room.startGame(ws.playerId);
+        broadcastLobbyList();
       } catch (err: any) {
         sendError(ws, err.message || 'Failed to start game');
       }
@@ -174,6 +193,7 @@ function handleClientMessage(ws: ExtendedWebSocket, msg: ClientMessage): void {
 
       try {
         room.resetToLobby(ws.playerId);
+        broadcastLobbyList();
       } catch (err: any) {
         sendError(ws, err.message || 'Failed to reset room to lobby');
       }
@@ -360,6 +380,7 @@ function handleClientMessage(ws: ExtendedWebSocket, msg: ClientMessage): void {
 
         // Broadcast updated state to every player in the room
         room.broadcastRoomState();
+        broadcastLobbyList();
       } catch (err: any) {
         sendError(ws, err.message || 'Failed to join room', 'JOIN_FAILED');
       }
@@ -418,6 +439,7 @@ function handleClientMessage(ws: ExtendedWebSocket, msg: ClientMessage): void {
             });
             room.broadcastRoomState();
           }
+          broadcastLobbyList();
         }
       }
       break;
@@ -451,6 +473,7 @@ function handleClientMessage(ws: ExtendedWebSocket, msg: ClientMessage): void {
           playerId: msg.targetPlayerId
         });
         room.broadcastRoomState();
+        broadcastLobbyList();
       } catch (err: any) {
         sendError(ws, err.message || 'Failed to kick player');
       }
@@ -485,6 +508,14 @@ function handleClientMessage(ws: ExtendedWebSocket, msg: ClientMessage): void {
       break;
     }
 
+    case 'GET_LOBBIES': {
+      sendMessage(ws, {
+        type: 'LOBBY_LIST',
+        lobbies: roomManager.getAllLobbies()
+      });
+      break;
+    }
+
     default:
       console.warn('[WS] Unhandled client message:', msg);
   }
@@ -497,6 +528,7 @@ function handleDisconnect(ws: ExtendedWebSocket): void {
       room.setPlayerConnected(ws.playerId, false);
       // Notify remaining players in room about connection drop
       room.broadcastRoomState();
+      broadcastLobbyList();
     }
   }
 }

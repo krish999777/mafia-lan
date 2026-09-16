@@ -1,5 +1,6 @@
 import { Room } from './Room.js';
 import { generateRoomCode } from '../utils/codeGen.js';
+import { LobbySummary } from '../../../shared/types.js';
 
 export class RoomManager {
   private rooms: Map<string, Room> = new Map();
@@ -65,6 +66,17 @@ export class RoomManager {
    */
   public getRoomCount(): number {
     return this.rooms.size;
+  }
+
+  /**
+   * Get all active lobbies sorted from latest to oldest
+   */
+  public getAllLobbies(): LobbySummary[] {
+    const list: LobbySummary[] = [];
+    for (const room of this.rooms.values()) {
+      list.push(room.getLobbySummary());
+    }
+    return list.sort((a, b) => b.createdAt - a.createdAt);
   }
 
   /**

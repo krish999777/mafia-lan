@@ -63,7 +63,9 @@ export const App: React.FC = () => {
     dismissError,
     kickPlayer,
     forceMafia,
-    clearForcedMafia
+    clearForcedMafia,
+    lobbies,
+    refreshLobbies
   } = useLobby();
 
   const [isDevMode, setIsDevMode] = React.useState<boolean>(false);
@@ -103,6 +105,8 @@ export const App: React.FC = () => {
           isJoining={isJoining}
           onCreateRoom={createRoom}
           onJoinRoom={joinRoom}
+          lobbies={lobbies}
+          onRefreshLobbies={refreshLobbies}
         />
       );
     }
@@ -238,12 +242,16 @@ export const App: React.FC = () => {
           <Lobby
             roomCode={roomCode}
             currentPlayerId={playerId}
+            playerName={playerName}
             isHost={isHost}
             players={players}
             lanInfo={lanInfo}
             mafiaCount={mafiaCount}
             rejoinedPlayerIds={rejoinedPlayerIds}
             isDevMode={isDevMode}
+            lobbies={lobbies}
+            onRefreshLobbies={refreshLobbies}
+            onJoinRoom={joinRoom}
             onSetMafiaCount={setMafiaCount}
             onStartGame={startGame}
             onLeaveRoom={leaveRoom}

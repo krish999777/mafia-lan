@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
-import { PlayerSummary, LanInfo, MIN_PLAYERS, MAX_PLAYERS } from '@shared/types.js';
+import { PlayerSummary, LanInfo, MIN_PLAYERS, MAX_PLAYERS, LobbySummary } from '@shared/types.js';
 import { PlayerCard } from '../components/PlayerCard.js';
 import { QRCodeModal } from '../components/QRCodeModal.js';
 
 interface LobbyProps {
   roomCode: string;
   currentPlayerId: string | null;
+  playerName?: string;
   isHost: boolean;
   players: PlayerSummary[];
   lanInfo: LanInfo | null;
   mafiaCount?: number;
   rejoinedPlayerIds?: string[];
   isDevMode?: boolean;
+  lobbies?: LobbySummary[];
+  onRefreshLobbies?: () => void;
+  onJoinRoom?: (code: string, name: string) => void;
   onSetMafiaCount?: (count: number) => void;
   onStartGame: () => void;
   onLeaveRoom: () => void;
@@ -23,12 +27,16 @@ interface LobbyProps {
 export const Lobby: React.FC<LobbyProps> = ({
   roomCode,
   currentPlayerId,
+  playerName,
   isHost,
   players,
   lanInfo,
   mafiaCount,
   rejoinedPlayerIds,
   isDevMode = false,
+  lobbies = [],
+  onRefreshLobbies,
+  onJoinRoom,
   onSetMafiaCount,
   onStartGame,
   onLeaveRoom,
@@ -39,6 +47,25 @@ export const Lobby: React.FC<LobbyProps> = ({
   const [showQR, setShowQR] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [devPlayerClicks, setDevPlayerClicks] = useState<Record<string, number>>({});
+
+  const formatTimeAgo = (timestamp: number): string => {
+    const diffSec = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+    if (diffSec < 60) return 'Just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHours = Math.floor(diffMin / 60);
+    return `${diffHours}h ago`;
+  };
+
+  const handleSwitchLobby = (targetCode: string) => {
+    if (!playerName || !onJoinRoom) return;
+    if (window.confirm(`Leave current lobby and switch to lobby ${targetCode}?`)) {
+      onLeaveRoom();
+      setTimeout(() => {
+        onJoinRoom(targetCode, playerName);
+      }, 150);
+    }
+  };
 
   React.useEffect(() => {
     if (!isDevMode) {
@@ -313,6 +340,79 @@ export const Lobby: React.FC<LobbyProps> = ({
       >
         Leave Room
       </button>
+
+      {/* Active Lobbies Browser within Lobby (Latest to Oldest) */}
+      {lobbies.length > 0 && (
+        <div className="lobby-browser-card" style={{ marginTop: '0.5rem' }}>
+          <div className="lobby-browser-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ fontSize: '1.1rem' }}>📡</span>
+              <div>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 800, margin: 0 }}>Active Lobbies on LAN</h4>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0 }}>
+                  Switch to another lobby without typing code
+                </p>
+              </div>
+            </div>
+            {onRefreshLobbies && (
+              <button
+                type="button"
+                className="lobby-refresh-btn"
+                onClick={onRefreshLobbies}
+                title="Refresh Lobbies"
+              >
+                ↻
+              </button>
+            )}
+          </div>
+
+          <div className="lobby-list">
+            {lobbies.map((lobby) => {
+              const isCurrent = lobby.roomCode === roomCode;
+              return (
+                <div
+                  key={lobby.roomCode}
+                  className={`lobby-item-card ${isCurrent ? 'current-lobby' : ''}`}
+                  onClick={() => !isCurrent && handleSwitchLobby(lobby.roomCode)}
+                  style={{ cursor: isCurrent ? 'default' : 'pointer' }}
+                >
+                  <div className="lobby-item-left">
+                    <div className="lobby-code-badge">{lobby.roomCode}</div>
+                    <div className="lobby-host-info">
+                      <span className="lobby-host-name">
+                        👑 {lobby.hostName} {isCurrent ? '(Current)' : ''}
+                      </span>
+                      <span className="lobby-created-time">{formatTimeAgo(lobby.createdAt)}</span>
+                    </div>
+                  </div>
+
+                  <div className="lobby-item-right">
+                    <div className="lobby-player-count">
+                      👥 {lobby.playerCount} / {lobby.maxPlayers}
+                    </div>
+                    {isCurrent ? (
+                      <span className="lobby-status-pill open" style={{ borderColor: 'var(--accent-green)' }}>
+                        Current
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="lobby-quick-join-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSwitchLobby(lobby.roomCode);
+                        }}
+                      >
+                        Switch →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* QR Code Modal */}
       {showQR && (

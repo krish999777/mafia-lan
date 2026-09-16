@@ -1,5 +1,5 @@
 import { WebSocket } from 'ws';
-import { Player, PlayerSummary, GamePhase, ServerMessage, Role, GameOverResult, MafiaChatMessage, NightResolutionResult, VoteResult, MinigameChallenge } from '../../../shared/types.js';
+import { Player, PlayerSummary, GamePhase, ServerMessage, Role, GameOverResult, MafiaChatMessage, NightResolutionResult, VoteResult, MinigameChallenge, LobbySummary } from '../../../shared/types.js';
 import { GameEngine } from '../game/GameEngine.js';
 import { MinigameEngine } from '../minigames/MinigameEngine.js';
 
@@ -217,6 +217,18 @@ export class Room {
       connected: p.connected,
       isHost: p.id === this.hostId
     }));
+  }
+
+  public getLobbySummary(): LobbySummary {
+    const host = this.players.get(this.hostId);
+    return {
+      roomCode: this.roomCode,
+      hostName: host ? host.name : 'Host',
+      playerCount: this.players.size,
+      maxPlayers: GameEngine.MAX_PLAYERS,
+      phase: this.phase,
+      createdAt: this.createdAt
+    };
   }
 
   /**

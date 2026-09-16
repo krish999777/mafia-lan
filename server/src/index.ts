@@ -55,6 +55,13 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+// Active lobbies discovery endpoint (ordered latest to oldest)
+app.get('/api/lobbies', (_req, res) => {
+  res.json({
+    lobbies: roomManager.getAllLobbies()
+  });
+});
+
 // Serve built React client if available
 if (hasClientDist) {
   console.log(`[HTTP] Serving client build from ${clientDistPath}`);

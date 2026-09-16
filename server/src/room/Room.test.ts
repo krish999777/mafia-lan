@@ -907,6 +907,40 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
     assert.equal(room.provenCivilianIds.includes(hostMafia.id), false, 'Mafia must never be in provenCivilianIds');
     assert.ok(room.provenCivilianIds.includes(civ1.id), 'Civ 1 should be proven innocent');
   });
+
+  it('returns all active lobbies sorted from latest to oldest with accurate player counts', () => {
+    const manager = new RoomManager();
+    const r1 = manager.createRoom();
+    r1.createdAt = 1000;
+    r1.addPlayer('Alice', createMockSocket());
+    r1.addPlayer('Bob', createMockSocket());
+
+    const r2 = manager.createRoom();
+    r2.createdAt = 3000;
+    r2.addPlayer('Charlie', createMockSocket());
+    r2.addPlayer('Dave', createMockSocket());
+    r2.addPlayer('Eve', createMockSocket());
+
+    const r3 = manager.createRoom();
+    r3.createdAt = 2000;
+    r3.addPlayer('Frank', createMockSocket());
+
+    const lobbies = manager.getAllLobbies();
+    assert.equal(lobbies.length, 3);
+    // Must be sorted latest to oldest: r2 (3000) -> r3 (2000) -> r1 (1000)
+    assert.equal(lobbies[0].roomCode, r2.roomCode);
+    assert.equal(lobbies[0].hostName, 'Charlie');
+    assert.equal(lobbies[0].playerCount, 3);
+    assert.equal(lobbies[0].phase, 'LOBBY');
+
+    assert.equal(lobbies[1].roomCode, r3.roomCode);
+    assert.equal(lobbies[1].hostName, 'Frank');
+    assert.equal(lobbies[1].playerCount, 1);
+
+    assert.equal(lobbies[2].roomCode, r1.roomCode);
+    assert.equal(lobbies[2].hostName, 'Alice');
+    assert.equal(lobbies[2].playerCount, 2);
+  });
 });
 
 

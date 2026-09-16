@@ -20,6 +20,15 @@ export type PlayerSummary = {
   isHost: boolean;
 };
 
+export interface LobbySummary {
+  roomCode: string;
+  hostName: string;
+  playerCount: number;
+  maxPlayers: number;
+  phase: GamePhase;
+  createdAt: number;
+}
+
 export type GamePhase =
   | 'LOBBY'
   | 'ROLE_REVEAL'
@@ -100,6 +109,7 @@ export type ClientMessage =
   | { type: 'KICK_PLAYER'; targetPlayerId: string }
   | { type: 'DEV_FORCE_MAFIA'; targetPlayerId: string }
   | { type: 'DEV_CLEAR_MAFIA' }
+  | { type: 'GET_LOBBIES' }
   | { type: 'PING' };
 
 // Server -> Client messages
@@ -155,6 +165,7 @@ export type ServerMessage =
   | { type: 'PLAYER_LEFT'; playerId: string }
   | { type: 'PLAYER_STATUS_CHANGED'; playerId: string; connected: boolean }
   | { type: 'KICKED'; message?: string }
+  | { type: 'LOBBY_LIST'; lobbies: LobbySummary[] }
   | { type: 'ERROR'; message: string; code?: string }
   | { type: 'PONG' };
 

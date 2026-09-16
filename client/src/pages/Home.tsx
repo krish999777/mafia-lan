@@ -1,21 +1,36 @@
 import React, { useState, useEffect } from 'react';
+import { LobbySummary } from '@shared/types.js';
 
 interface HomeProps {
   initialName: string;
   isJoining: boolean;
   onCreateRoom: (name: string) => void;
   onJoinRoom: (code: string, name: string) => void;
+  lobbies?: LobbySummary[];
+  onRefreshLobbies?: () => void;
+}
+
+function formatTimeAgo(timestamp: number): string {
+  const diffSec = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (diffSec < 60) return 'Just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  return `${diffHours}h ago`;
 }
 
 export const Home: React.FC<HomeProps> = ({
   initialName,
   isJoining,
   onCreateRoom,
-  onJoinRoom
+  onJoinRoom,
+  lobbies = [],
+  onRefreshLobbies
 }) => {
   const [activeTab, setActiveTab] = useState<'create' | 'join'>('create');
   const [name, setName] = useState<string>(initialName);
   const [roomCode, setRoomCode] = useState<string>('');
+  const [selectNotice, setSelectNotice] = useState<string | null>(null);
 
   // Check URL query parameters for join code (e.g. ?join=M7K4 or ?room=M7K4)
   useEffect(() => {
@@ -26,6 +41,18 @@ export const Home: React.FC<HomeProps> = ({
       setActiveTab('join');
     }
   }, []);
+
+  const handleSelectLobby = (code: string) => {
+    setRoomCode(code);
+    if (name.trim()) {
+      onJoinRoom(code, name.trim());
+    } else {
+      setActiveTab('join');
+      setSelectNotice(`Selected lobby ${code}! Enter your codename to join.`);
+      setTimeout(() => setSelectNotice(null), 4000);
+      document.getElementById('join-name')?.focus();
+    }
+  };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,6 +179,111 @@ export const Home: React.FC<HomeProps> = ({
               {isJoining ? 'Joining Room...' : 'Join Game'}
             </button>
           </form>
+        )}
+      </div>
+
+      {/* Quick Select Notice Banner */}
+      {selectNotice && (
+        <div
+          className="glass-card"
+          style={{
+            padding: '0.75rem 1rem',
+            borderColor: 'rgba(0, 240, 255, 0.4)',
+            background: 'rgba(0, 240, 255, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.6rem',
+            fontSize: '0.85rem',
+            color: 'var(--accent-cyan)'
+          }}
+        >
+          <span>🎯</span>
+          <span style={{ fontWeight: 600 }}>{selectNotice}</span>
+        </div>
+      )}
+
+      {/* Active Lobbies on LAN Browser */}
+      <div className="lobby-browser-card">
+        <div className="lobby-browser-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>📡</span>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                <h3 style={{ fontSize: '0.98rem', fontWeight: 800, margin: 0 }}>Active Lobbies on LAN</h3>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    background: 'var(--accent-green)',
+                    boxShadow: '0 0 8px var(--accent-green)'
+                  }}
+                />
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '0.1rem 0 0 0' }}>
+                Tap any lobby to join directly without typing code
+              </p>
+            </div>
+          </div>
+
+          {onRefreshLobbies && (
+            <button
+              type="button"
+              className="lobby-refresh-btn"
+              onClick={onRefreshLobbies}
+              title="Refresh Lobbies"
+            >
+              ↻
+            </button>
+          )}
+        </div>
+
+        {lobbies.length === 0 ? (
+          <div className="lobby-empty-state">
+            <span style={{ fontSize: '1.4rem' }}>🔍</span>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: '0.88rem' }}>No Active Lobbies Found</p>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', maxWidth: '280px' }}>
+              Create a room above to host, or ensure all players are connected to the same Wi-Fi router or hotspot.
+            </span>
+          </div>
+        ) : (
+          <div className="lobby-list">
+            {lobbies.map((lobby) => (
+              <div
+                key={lobby.roomCode}
+                className="lobby-item-card"
+                onClick={() => handleSelectLobby(lobby.roomCode)}
+              >
+                <div className="lobby-item-left">
+                  <div className="lobby-code-badge">{lobby.roomCode}</div>
+                  <div className="lobby-host-info">
+                    <span className="lobby-host-name">👑 {lobby.hostName}</span>
+                    <span className="lobby-created-time">{formatTimeAgo(lobby.createdAt)}</span>
+                  </div>
+                </div>
+
+                <div className="lobby-item-right">
+                  <div className="lobby-player-count">
+                    👥 {lobby.playerCount} / {lobby.maxPlayers}
+                  </div>
+                  <span className={`lobby-status-pill ${lobby.phase === 'LOBBY' ? 'open' : 'in-game'}`}>
+                    {lobby.phase === 'LOBBY' ? 'Open' : 'In Game'}
+                  </span>
+                  <button
+                    type="button"
+                    className="lobby-quick-join-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectLobby(lobby.roomCode);
+                    }}
+                  >
+                    Join →
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

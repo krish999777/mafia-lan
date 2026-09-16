@@ -510,4 +510,29 @@ describe('WebSocket Multi-Client Flow', () => {
     p3.close();
     p4.close();
   });
+
+  it('replies with LOBBY_LIST and broadcasts updated lobbies on room creation and joins', async () => {
+    const client = await connectClient();
+
+    // Query active lobbies
+    const listPromise = waitForMessage(client, 'LOBBY_LIST');
+    client.send(JSON.stringify({ type: 'GET_LOBBIES' } as ClientMessage));
+    const listMsg = (await listPromise) as any;
+    assert.equal(listMsg.type, 'LOBBY_LIST');
+    assert.ok(Array.isArray(listMsg.lobbies));
+
+    // Another client creates a room
+    const host = await connectClient();
+    const broadcastPromise = waitForMessage(client, 'LOBBY_LIST');
+    host.send(JSON.stringify({ type: 'CREATE_ROOM', name: 'AutoHost' } as ClientMessage));
+
+    const broadcastMsg = (await broadcastPromise) as any;
+    assert.equal(broadcastMsg.type, 'LOBBY_LIST');
+    const createdLobby = broadcastMsg.lobbies.find((l: any) => l.hostName === 'AutoHost');
+    assert.ok(createdLobby, 'New lobby must be broadcast to other clients');
+    assert.equal(createdLobby.playerCount, 1);
+
+    client.close();
+    host.close();
+  });
 });

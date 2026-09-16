@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { socketService } from '../lib/socket.js';
 import { storage } from '../lib/storage.js';
-import { PlayerSummary, GamePhase, LanInfo, Role, VoteResult, GameOverResult, MafiaChatMessage, MinigameChallenge, NightResolutionResult } from '@shared/types.js';
+import { PlayerSummary, GamePhase, LanInfo, Role, VoteResult, GameOverResult, MafiaChatMessage, MinigameChallenge, NightResolutionResult, LobbySummary } from '@shared/types.js';
 
 export function useLobby() {
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -36,6 +36,7 @@ export function useLobby() {
   const [error, setError] = useState<string | null>(null);
   const [lanInfo, setLanInfo] = useState<LanInfo | null>(null);
   const [isJoining, setIsJoining] = useState<boolean>(false);
+  const [lobbies, setLobbies] = useState<LobbySummary[]>([]);
 
   // Fetch LAN info for QR generation
   useEffect(() => {
@@ -63,6 +64,7 @@ export function useLobby() {
             playerId: savedPlayer
           });
         }
+        socketService.send({ type: 'GET_LOBBIES' });
       }
     });
 
@@ -258,6 +260,10 @@ export function useLobby() {
           setError(msg.message || 'You have been removed from the lobby by the host.');
           break;
 
+        case 'LOBBY_LIST':
+          setLobbies(msg.lobbies);
+          break;
+
         case 'ERROR':
           setError(msg.message);
           setIsJoining(false);
@@ -270,6 +276,25 @@ export function useLobby() {
       unsubMessage();
     };
   }, []);
+
+  const refreshLobbies = useCallback(() => {
+    socketService.send({ type: 'GET_LOBBIES' });
+    fetch('/api/lobbies')
+      .then((res) => res.json())
+      .then((data: { lobbies: LobbySummary[] }) => {
+        if (Array.isArray(data.lobbies)) {
+          setLobbies(data.lobbies);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Poll for active lobbies every 2.5 seconds
+  useEffect(() => {
+    refreshLobbies();
+    const timer = setInterval(refreshLobbies, 2500);
+    return () => clearInterval(timer);
+  }, [refreshLobbies]);
 
   const createRoom = useCallback((name: string) => {
     setIsJoining(true);
@@ -441,6 +466,8 @@ export function useLobby() {
     dismissError,
     kickPlayer,
     forceMafia,
-    clearForcedMafia
+    clearForcedMafia,
+    lobbies,
+    refreshLobbies
   };
 }
