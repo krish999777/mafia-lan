@@ -214,11 +214,43 @@ class MafiaServerService : Service() {
 
     private fun extractServerAssetsIfNeeded(): File {
         val serverDir = File(filesDir, "server")
-        if (!serverDir.exists()) {
-            serverDir.mkdirs()
+        val prefs = getSharedPreferences("mafia_server_prefs", Context.MODE_PRIVATE)
+        val lastExtractedBuild = prefs.getString("last_extracted_build_id", "")
+
+        // Read current buildId from assets/server/build_info.json
+        val currentBuildId = try {
+            assets.open("server/build_info.json").bufferedReader().use { it.readText() }
+        } catch (e: Exception) {
+            // Fallback to package lastUpdateTime
+            try {
+                packageManager.getPackageInfo(packageName, 0).lastUpdateTime.toString()
+            } catch (_: Exception) {
+                System.currentTimeMillis().toString()
+            }
         }
 
-        copyAssetDirectory("server", serverDir)
+        val mainBundle = File(serverDir, "bundle.mjs")
+        val indexHtml = File(serverDir, "public/index.html")
+        val needsFullExtract = !serverDir.exists() ||
+                lastExtractedBuild != currentBuildId ||
+                !mainBundle.exists() ||
+                mainBundle.length() == 0L ||
+                !indexHtml.exists() ||
+                indexHtml.length() == 0L
+
+        if (needsFullExtract) {
+            Log.i(TAG, "New build detected ($currentBuildId vs $lastExtractedBuild). Cleaning and extracting fresh assets...")
+            if (serverDir.exists()) {
+                serverDir.deleteRecursively()
+            }
+            serverDir.mkdirs()
+            copyAssetDirectory("server", serverDir)
+            prefs.edit().putString("last_extracted_build_id", currentBuildId).apply()
+            Log.i(TAG, "Server assets successfully refreshed in: ${serverDir.absolutePath}")
+        } else {
+            Log.i(TAG, "Server assets are up to date ($currentBuildId).")
+        }
+
         return serverDir
     }
 
@@ -245,30 +277,16 @@ class MafiaServerService : Service() {
     }
 
     private fun copyAssetFile(assetPath: String, targetFile: File) {
-        var inputStream: InputStream? = null
-        var outputStream: FileOutputStream? = null
         try {
-            inputStream = assets.open(assetPath)
-            val available = inputStream.available()
-
-            // If target file already exists and matches non-zero size, skip copying
-            if (targetFile.exists() && targetFile.length() > 0L && (available == 0 || targetFile.length() == available.toLong())) {
-                return
+            targetFile.parentFile?.mkdirs()
+            assets.open(assetPath).use { inputStream ->
+                FileOutputStream(targetFile).use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
             }
-
-            outputStream = FileOutputStream(targetFile)
-            val buffer = ByteArray(16384)
-            var read: Int
-            while (inputStream.read(buffer).also { read = it } != -1) {
-                outputStream.write(buffer, 0, read)
-            }
-            outputStream.flush()
             Log.d(TAG, "Copied asset $assetPath -> ${targetFile.absolutePath} (${targetFile.length()} bytes)")
         } catch (e: Exception) {
             Log.e(TAG, "Error copying asset file: $assetPath", e)
-        } finally {
-            try { inputStream?.close() } catch (_: Exception) {}
-            try { outputStream?.close() } catch (_: Exception) {}
         }
     }
 

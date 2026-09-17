@@ -1,3 +1,9 @@
 # ninja log v5
 0	259	1789480767619385889	CMakeFiles/mafia-node-bridge.dir/native-lib.cpp.o	f7eaaa15f70793d9
 260	322	1789480767684471242	/Users/krishshah/all coding stuff/mafia_lan/android/app/build/intermediates/cxx/Debug/1h541x55/obj/x86_64/libmafia-node-bridge.so	8356ca74eb808227
+0	11	0	clean	c519a6ac5911603
+2	264	1789655472714047925	CMakeFiles/mafia-node-bridge.dir/native-lib.cpp.o	f7eaaa15f70793d9
+265	337	1789655472787394517	/Users/krishshah/all coding stuff/mafia_lan/android/app/build/intermediates/cxx/Debug/1h541x55/obj/x86_64/libmafia-node-bridge.so	8356ca74eb808227
+0	8	0	clean	c519a6ac5911603
+2	287	1789655564785564114	CMakeFiles/mafia-node-bridge.dir/native-lib.cpp.o	f7eaaa15f70793d9
+287	358	1789655564860070834	/Users/krishshah/all coding stuff/mafia_lan/android/app/build/intermediates/cxx/Debug/1h541x55/obj/x86_64/libmafia-node-bridge.so	8356ca74eb808227

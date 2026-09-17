@@ -184,6 +184,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnReloadWebView.setOnClickListener {
+            gameWebView.clearCache(true)
             gameWebView.reload()
         }
     }
@@ -358,7 +359,7 @@ class MainActivity : AppCompatActivity() {
         settings.domStorageEnabled = true
         settings.databaseEnabled = true
         settings.allowFileAccess = true
-        settings.cacheMode = WebSettings.LOAD_DEFAULT
+        settings.cacheMode = WebSettings.LOAD_NO_CACHE
         settings.useWideViewPort = true
         settings.loadWithOverviewMode = true
 
@@ -417,6 +418,7 @@ class MainActivity : AppCompatActivity() {
     private fun openInAppGame(url: String) {
         dashboardLayout.visibility = View.GONE
         inAppWebViewContainer.visibility = View.VISIBLE
+        gameWebView.clearCache(true)
         // Use 127.0.0.1 for in-app webview for minimum latency and direct loopback
         val webViewUrl = "http://127.0.0.1:3000"
         gameWebView.loadUrl(webViewUrl)

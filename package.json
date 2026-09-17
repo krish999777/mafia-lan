@@ -14,7 +14,7 @@
     "build:client": "npm run build --workspace=client",
     "build:server": "npm run build --workspace=server",
     "build": "npm run build:client && npm run build:server",
-    "build:android": "node scripts/bundle-android-server.mjs && (cd android && export JAVA_HOME=/opt/homebrew/opt/openjdk@21 && ./gradlew assembleDebug) && cp android/app/build/outputs/apk/debug/app-debug.apk ./mafia-server.apk",
+    "build:android": "node scripts/bundle-android-server.mjs && (cd android && export JAVA_HOME=/opt/homebrew/opt/openjdk@21 && ./gradlew clean assembleDebug) && cp android/app/build/outputs/apk/debug/app-debug.apk ./mafia-server.apk",
     "start": "npm run start --workspace=server",
     "test": "npm run test --workspace=server"
   },
