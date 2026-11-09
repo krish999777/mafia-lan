@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { GameEngine } from './GameEngine.js';
 
 describe('GameEngine — Role Assignment & Balancing', () => {
-  it('throws error when player count is below minimum (4) or above maximum (15)', () => {
-    assert.throws(() => GameEngine.calculateMafiaCount(3), /between 4 and 15/);
-    assert.throws(() => GameEngine.calculateMafiaCount(16), /between 4 and 15/);
-    assert.throws(() => GameEngine.assignRoles(['p1', 'p2', 'p3']), /between 4 and 15/);
-    assert.throws(() => GameEngine.assignRoles(Array(16).fill('p')), /between 4 and 15/);
+  it('throws error when player count is below minimum (4) or above maximum (30)', () => {
+    assert.throws(() => GameEngine.calculateMafiaCount(3), /between 4 and 30/);
+    assert.throws(() => GameEngine.calculateMafiaCount(31), /between 4 and 30/);
+    assert.throws(() => GameEngine.assignRoles(['p1', 'p2', 'p3']), /between 4 and 30/);
+    assert.throws(() => GameEngine.assignRoles(Array(31).fill('p')), /between 4 and 30/);
   });
 
-  it('balances Mafia and Civilian ratios according to player counts (4 to 15)', () => {
+  it('balances Mafia and Civilian ratios according to player counts (4 to 30)', () => {
     // 4 to 6 players: exactly 1 Mafia
     assert.equal(GameEngine.calculateMafiaCount(4), 1);
     assert.equal(GameEngine.calculateMafiaCount(5), 1);
@@ -30,9 +30,34 @@ describe('GameEngine — Role Assignment & Balancing', () => {
     assert.equal(GameEngine.calculateMafiaCount(13), 4);
     assert.equal(GameEngine.calculateMafiaCount(14), 4);
     assert.equal(GameEngine.calculateMafiaCount(15), 4);
+
+    // 16 to 18 players: exactly 5 Mafia
+    assert.equal(GameEngine.calculateMafiaCount(16), 5);
+    assert.equal(GameEngine.calculateMafiaCount(17), 5);
+    assert.equal(GameEngine.calculateMafiaCount(18), 5);
+
+    // 19 to 21 players: exactly 6 Mafia
+    assert.equal(GameEngine.calculateMafiaCount(19), 6);
+    assert.equal(GameEngine.calculateMafiaCount(20), 6);
+    assert.equal(GameEngine.calculateMafiaCount(21), 6);
+
+    // 22 to 24 players: exactly 7 Mafia
+    assert.equal(GameEngine.calculateMafiaCount(22), 7);
+    assert.equal(GameEngine.calculateMafiaCount(23), 7);
+    assert.equal(GameEngine.calculateMafiaCount(24), 7);
+
+    // 25 to 27 players: exactly 8 Mafia
+    assert.equal(GameEngine.calculateMafiaCount(25), 8);
+    assert.equal(GameEngine.calculateMafiaCount(26), 8);
+    assert.equal(GameEngine.calculateMafiaCount(27), 8);
+
+    // 28 to 30 players: exactly 9 Mafia
+    assert.equal(GameEngine.calculateMafiaCount(28), 9);
+    assert.equal(GameEngine.calculateMafiaCount(29), 9);
+    assert.equal(GameEngine.calculateMafiaCount(30), 9);
   });
 
-  it('calculates selectable Mafia options according to rules (1 for 4-6, 2 at 7, 3 at 10, 4 at 13)', () => {
+  it('calculates selectable Mafia options according to rules (1 for 4-6 up to 9 for 28-30)', () => {
     assert.deepEqual(GameEngine.calculateMafiaOptions(4), [1]);
     assert.deepEqual(GameEngine.calculateMafiaOptions(6), [1]);
     assert.deepEqual(GameEngine.calculateMafiaOptions(7), [1, 2]);
@@ -41,6 +66,16 @@ describe('GameEngine — Role Assignment & Balancing', () => {
     assert.deepEqual(GameEngine.calculateMafiaOptions(12), [1, 2, 3]);
     assert.deepEqual(GameEngine.calculateMafiaOptions(13), [1, 2, 3, 4]);
     assert.deepEqual(GameEngine.calculateMafiaOptions(15), [1, 2, 3, 4]);
+    assert.deepEqual(GameEngine.calculateMafiaOptions(16), [1, 2, 3, 4, 5]);
+    assert.deepEqual(GameEngine.calculateMafiaOptions(18), [1, 2, 3, 4, 5]);
+    assert.deepEqual(GameEngine.calculateMafiaOptions(19), [1, 2, 3, 4, 5, 6]);
+    assert.deepEqual(GameEngine.calculateMafiaOptions(21), [1, 2, 3, 4, 5, 6]);
+    assert.deepEqual(GameEngine.calculateMafiaOptions(22), [1, 2, 3, 4, 5, 6, 7]);
+    assert.deepEqual(GameEngine.calculateMafiaOptions(24), [1, 2, 3, 4, 5, 6, 7]);
+    assert.deepEqual(GameEngine.calculateMafiaOptions(25), [1, 2, 3, 4, 5, 6, 7, 8]);
+    assert.deepEqual(GameEngine.calculateMafiaOptions(27), [1, 2, 3, 4, 5, 6, 7, 8]);
+    assert.deepEqual(GameEngine.calculateMafiaOptions(28), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    assert.deepEqual(GameEngine.calculateMafiaOptions(30), [1, 2, 3, 4, 5, 6, 7, 8, 9]);
   });
 
   it('assigns custom chosen Mafia count when valid', () => {
@@ -55,6 +90,16 @@ describe('GameEngine — Role Assignment & Balancing', () => {
     const roles2 = GameEngine.assignRoles(players7, 2);
     const mafia2 = Array.from(roles2.values()).filter((r) => r === 'MAFIA').length;
     assert.equal(mafia2, 2);
+
+    // 30 players: default is 9 mafia, can choose 5 or 9
+    const players30 = Array.from({ length: 30 }, (_, i) => `p${i + 1}`);
+    const rolesDefault = GameEngine.assignRoles(players30);
+    const mafiaDefault = Array.from(rolesDefault.values()).filter((r) => r === 'MAFIA').length;
+    assert.equal(mafiaDefault, 9);
+
+    const rolesCustom5 = GameEngine.assignRoles(players30, 5);
+    const mafiaCustom5 = Array.from(rolesCustom5.values()).filter((r) => r === 'MAFIA').length;
+    assert.equal(mafiaCustom5, 5);
   });
 
   it('evaluates win conditions accurately for Civilians and Mafia', () => {

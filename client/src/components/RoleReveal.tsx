@@ -76,7 +76,7 @@ export const RoleReveal: React.FC<RoleRevealProps> = ({ role, teammates, phaseEn
         {/* Civilian Objective Tip */}
         {!isMafia && (
           <div className="civilian-tip-box">
-            💡 Stay sharp during the night minigames to survive. Listen carefully to players during day voting.
+            💡 Solve night minigames to earn Proven Innocent status. Listen carefully to players during day voting.
           </div>
         )}
       </div>

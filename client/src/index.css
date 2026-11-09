@@ -971,6 +971,7 @@ body::before {
 
 .segmented-selector {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.35rem;
   background: rgba(10, 12, 20, 0.6);
   padding: 0.25rem;
@@ -979,7 +980,8 @@ body::before {
 }
 
 .selector-option {
-  flex: 1;
+  flex: 1 1 calc(20% - 0.35rem);
+  min-width: 62px;
   background: none;
   border: none;
   color: var(--text-muted);
@@ -988,6 +990,8 @@ body::before {
   font-weight: 700;
   border-radius: 4px;
   cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
   transition: all var(--transition-fast);
 }
 
@@ -2476,14 +2480,73 @@ body::before {
   margin-left: 0.4rem;
 }
 
+.badge-mafia-ally {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(230, 57, 70, 0.2);
+  color: #ff4d6d;
+  border: 1px solid rgba(230, 57, 70, 0.5);
+  box-shadow: 0 0 10px rgba(230, 57, 70, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: 0.4rem;
+}
+
 .player-item.is-proven-civilian {
   border-color: rgba(56, 189, 248, 0.4);
   background: rgba(56, 189, 248, 0.05);
 }
 
+.player-item.is-mafia-ally {
+  border-color: rgba(230, 57, 70, 0.45);
+  background: linear-gradient(90deg, rgba(230, 57, 70, 0.09) 0%, rgba(20, 24, 38, 0.8) 100%);
+}
+
 .candidate-item.candidate-proven-innocent {
   border-color: rgba(56, 189, 248, 0.35);
   background: rgba(56, 189, 248, 0.05);
+}
+
+.candidate-item.candidate-mafia-ally {
+  border-color: rgba(230, 57, 70, 0.45);
+  background: linear-gradient(90deg, rgba(230, 57, 70, 0.09) 0%, rgba(20, 24, 38, 0.8) 100%);
+}
+
+.day-mafia-banner {
+  border-color: rgba(230, 57, 70, 0.35);
+  background: radial-gradient(circle at 10% 10%, rgba(230, 57, 70, 0.15) 0%, rgba(20, 24, 38, 0.85) 100%);
+  padding: 1rem;
+}
+
+.mafia-ally-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-sm);
+  background: rgba(230, 57, 70, 0.18);
+  border: 1px solid rgba(230, 57, 70, 0.35);
+  color: #ff4d6d;
+}
+
+.mafia-ally-chip.me {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: var(--accent-gold);
+}
+
+.mafia-ally-chip.dead {
+  opacity: 0.55;
+  text-decoration: line-through;
+  background: rgba(100, 116, 139, 0.15);
+  border-color: rgba(100, 116, 139, 0.3);
+  color: var(--text-dim);
 }
 
 .top-defender-showcase-card {

@@ -1,42 +1,39 @@
-import { Role, MIN_PLAYERS, MAX_PLAYERS } from '../../../shared/types.js';
+import { Role, MIN_PLAYERS, MAX_PLAYERS, calculateMafiaOptions, calculateMafiaCount } from '../../../shared/types.js';
 
 export class GameEngine {
   public static readonly MIN_PLAYERS = MIN_PLAYERS;
   public static readonly MAX_PLAYERS = MAX_PLAYERS;
 
   /**
-   * Determine selectable Mafia options based on total player count (4 to 15):
+   * Determine selectable Mafia options based on total player count (4 to 30):
    * 4-6 players: [1] (fixed 1)
    * 7-9 players: [1, 2] (7 needed for 2)
    * 10-12 players: [1, 2, 3] (10 needed for 3)
    * 13-15 players: [1, 2, 3, 4]
+   * 16-18 players: [1, 2, 3, 4, 5]
+   * 19-21 players: [1..6]
+   * 22-24 players: [1..7]
+   * 25-27 players: [1..8]
+   * 28-30 players: [1..9]
    */
   public static calculateMafiaOptions(totalPlayers: number): number[] {
-    if (totalPlayers < this.MIN_PLAYERS || totalPlayers > this.MAX_PLAYERS) {
-      return [1];
-    }
-    if (totalPlayers <= 6) return [1];
-    if (totalPlayers <= 9) return [1, 2];
-    if (totalPlayers <= 12) return [1, 2, 3];
-    return [1, 2, 3, 4];
+    return calculateMafiaOptions(totalPlayers);
   }
 
   /**
-   * Determine balanced default Mafia count based on total players (4 to 15):
+   * Determine balanced default Mafia count based on total players (4 to 30):
    * 4-6 players: 1 Mafia
    * 7-9 players: 2 Mafia
    * 10-12 players: 3 Mafia
    * 13-15 players: 4 Mafia
+   * 16-18 players: 5 Mafia
+   * 19-21 players: 6 Mafia
+   * 22-24 players: 7 Mafia
+   * 25-27 players: 8 Mafia
+   * 28-30 players: 9 Mafia
    */
   public static calculateMafiaCount(totalPlayers: number): number {
-    if (totalPlayers < this.MIN_PLAYERS || totalPlayers > this.MAX_PLAYERS) {
-      throw new Error(`Cannot calculate roles: player count must be between ${this.MIN_PLAYERS} and ${this.MAX_PLAYERS}`);
-    }
-
-    if (totalPlayers <= 6) return 1;
-    if (totalPlayers <= 9) return 2;
-    if (totalPlayers <= 12) return 3;
-    return 4;
+    return calculateMafiaCount(totalPlayers);
   }
 
   /**

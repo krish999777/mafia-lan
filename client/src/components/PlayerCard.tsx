@@ -5,6 +5,7 @@ interface PlayerCardProps {
   player: PlayerSummary;
   isCurrentPlayer: boolean;
   isProvenCivilian?: boolean;
+  isMafiaTeammate?: boolean;
   onKick?: () => void;
   onClick?: () => void;
 }
@@ -13,6 +14,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   player,
   isCurrentPlayer,
   isProvenCivilian = false,
+  isMafiaTeammate = false,
   onKick,
   onClick
 }) => {
@@ -20,7 +22,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
   return (
     <div
-      className={`player-item ${isCurrentPlayer ? 'is-me' : ''} ${isProvenCivilian ? 'is-proven-civilian' : ''}`}
+      className={`player-item ${isCurrentPlayer ? 'is-me' : ''} ${isProvenCivilian ? 'is-proven-civilian' : ''} ${isMafiaTeammate ? 'is-mafia-ally' : ''}`}
       onClick={onClick}
     >
       <div className="player-info">
@@ -31,6 +33,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             {player.isHost && <span className="badge-host">HOST</span>}
             {isCurrentPlayer && <span className="badge-you">YOU</span>}
             {isProvenCivilian && <span className="badge-proven-civilian">🛡️ PROVEN INNOCENT</span>}
+            {isMafiaTeammate && <span className="badge-mafia-ally">🗡️ MAFIA ALLY</span>}
           </div>
         </div>
       </div>

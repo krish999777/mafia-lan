@@ -6,6 +6,7 @@ interface DayProps {
   players: PlayerSummary[];
   currentPlayerId: string | null;
   role: Role | null;
+  teammates?: { id: string; name: string }[];
   isHost: boolean;
   nightResult?: NightResolutionResult | null;
   provenCivilianIds?: string[];
@@ -17,6 +18,7 @@ export const Day: React.FC<DayProps> = ({
   players,
   currentPlayerId,
   role,
+  teammates = [],
   isHost,
   nightResult,
   provenCivilianIds = [],
@@ -81,6 +83,46 @@ export const Day: React.FC<DayProps> = ({
         </div>
       )}
 
+      {/* Secret Syndicate Operatives (Visible ONLY to Mafia) */}
+      {role === 'MAFIA' && (
+        <div className="glass-card day-mafia-banner">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '1.15rem' }}>🗡️</span>
+              <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--accent-crimson)' }}>
+                Syndicate Operatives ({teammates.length + 1} Total)
+              </span>
+            </div>
+            <span style={{ fontSize: '0.72rem', color: '#ff4d6d', background: 'rgba(230, 57, 70, 0.15)', padding: '2px 8px', borderRadius: '10px', fontWeight: 700 }}>
+              Secret / Mafia Only
+            </span>
+          </div>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0 0 0.5rem 0', lineHeight: 1.35 }}>
+            Coordinate subtly during Open Discussion without revealing your identities.
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+            <span className="mafia-ally-chip me">
+              👑 You (Mafia)
+            </span>
+            {teammates.length > 0 ? (
+              teammates.map((mate) => {
+                const matePlayer = players.find((p) => p.id === mate.id);
+                const isAlive = matePlayer ? matePlayer.alive : true;
+                return (
+                  <span key={mate.id} className={`mafia-ally-chip ${isAlive ? 'alive' : 'dead'}`}>
+                    🗡️ {mate.name} {isAlive ? '(Alive)' : '(Dead)'}
+                  </span>
+                );
+              })
+            ) : (
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                No other Mafia operatives (You are working alone)
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Discussion prompt */}
       <div className="glass-card" style={{ padding: '1.25rem', textAlign: 'center' }}>
         <div style={{ fontSize: '1.3rem', marginBottom: '0.3rem' }}>🗣️</div>
@@ -101,14 +143,18 @@ export const Day: React.FC<DayProps> = ({
         </div>
 
         <div className="player-card-list">
-          {livingPlayers.map((player) => (
-            <PlayerCard
-              key={player.id}
-              player={player}
-              isCurrentPlayer={player.id === currentPlayerId}
-              isProvenCivilian={provenCivilianIds.includes(player.id)}
-            />
-          ))}
+          {livingPlayers.map((player) => {
+            const isMafiaAlly = role === 'MAFIA' && Boolean(teammates.some((t) => t.id === player.id));
+            return (
+              <PlayerCard
+                key={player.id}
+                player={player}
+                isCurrentPlayer={player.id === currentPlayerId}
+                isProvenCivilian={provenCivilianIds.includes(player.id)}
+                isMafiaTeammate={isMafiaAlly}
+              />
+            );
+          })}
         </div>
       </div>
 

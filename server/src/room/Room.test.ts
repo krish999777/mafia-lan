@@ -65,17 +65,17 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
     assert.throws(() => room.addPlayer('a'.repeat(25), createMockSocket()), /cannot exceed/);
   });
 
-  it('enforces room player capacity between minimum 4 and maximum 15 players', () => {
+  it('enforces room player capacity between minimum 4 and maximum 30 players', () => {
     const room = new Room('MAXP');
-    for (let i = 1; i <= 15; i++) {
+    for (let i = 1; i <= 30; i++) {
       room.addPlayer(`Player${i}`, createMockSocket());
     }
-    assert.equal(room.getPlayerCount(), 15);
+    assert.equal(room.getPlayerCount(), 30);
 
-    // 16th player rejected
+    // 31st player rejected
     assert.throws(
-      () => room.addPlayer('Player16', createMockSocket()),
-      /maximum 15 players/i
+      () => room.addPlayer('Player31', createMockSocket()),
+      /maximum 30 players/i
     );
   });
 
@@ -324,7 +324,7 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
     assert.equal(room.gameOverResult?.winner, 'MAFIA');
   });
 
-  it('Phase 8: resolves night with simultaneous deaths, conceals causes/roles, and triggers game over', () => {
+  it('Phase 8: resolves night with Mafia assassination, conceals causes/roles, and preserves civilians who failed minigames', () => {
     const room = new Room('PHS8');
     const { player: host } = room.addPlayer('HostMafia', createMockSocket());
     const { player: c1 } = room.addPlayer('CivOne', createMockSocket());
@@ -360,20 +360,17 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
     room.resolveNight();
     assert.equal(room.phase, 'NIGHT_RESOLUTION');
 
-    // Verify deaths
+    // Verify deaths: only Mafia target is eliminated, civilians with 0 minigames solved survive!
     assert.equal(room.getPlayer(c1.id)!.alive, false, 'Mafia target should be eliminated');
     assert.equal(room.getPlayer(c2.id)!.alive, true, 'Passing civilian should survive');
-    assert.equal(room.getPlayer(c3.id)!.alive, false, 'Failing civilian should be eliminated');
-    assert.equal(room.getPlayer(c4.id)!.alive, false, 'Timeout civilian should be eliminated');
+    assert.equal(room.getPlayer(c3.id)!.alive, true, 'Failing civilian should survive (not eliminated)');
+    assert.equal(room.getPlayer(c4.id)!.alive, true, 'Timeout civilian should survive');
 
     // Verify death concealment
     const result = room.nightResult!;
     assert.ok(result);
-    assert.equal(result.disappearedPlayers.length, 3);
-    const disappearedIds = result.disappearedPlayers.map((p) => p.id);
-    assert.ok(disappearedIds.includes(c1.id));
-    assert.ok(disappearedIds.includes(c3.id));
-    assert.ok(disappearedIds.includes(c4.id));
+    assert.equal(result.disappearedPlayers.length, 1);
+    assert.equal(result.disappearedPlayers[0].id, c1.id);
 
     // Ensure NO roles or causes of death are exposed in disappearedPlayers
     for (const d of result.disappearedPlayers) {
@@ -382,10 +379,10 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
       assert.ok(d.name, 'Name should be present');
     }
 
-    // Complete dawn -> Host Mafia (1) vs CivTwo (1) -> Mafia parity win
+    // Complete dawn -> Host Mafia (1) vs 3 Civilians -> Game continues to Day 2!
     room.completeNightResolution();
-    assert.equal(room.phase, 'GAME_OVER');
-    assert.equal(room.gameOverResult?.winner, 'MAFIA');
+    assert.equal(room.phase, 'DAY');
+    assert.equal(room.round, 2);
   });
 
   it('Phase 8: advances to next Day round when Civilians survive and neither team has won', () => {
@@ -641,7 +638,7 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
     c2Challenge.validator = () => true;
     room.submitMinigameAction(c2.id, c2Challenge.token, 1);
 
-    // Civ 3 fails / solves 0 minigames (will disappear due to breached safehouse)
+    // Civ 3 fails / solves 0 minigames (does not die)
 
     // Resolve night with deterministic proven innocent roll (< 0.5)
     room.resolveNight(undefined, 0.1);
@@ -653,8 +650,8 @@ describe('Room & RoomManager (Offline LAN Core)', () => {
     assert.equal(room.nightResult?.topDefender?.score, 3);
     assert.ok(room.provenCivilianIds.includes(c1.id), 'StarCiv must be in provenCivilianIds');
 
-    // C3 solved 0 tasks -> breached and eliminated
-    assert.equal(room.getPlayer(c3.id)!.alive, false);
+    // C3 solved 0 tasks -> still alive (failing minigames does not kill players)
+    assert.equal(room.getPlayer(c3.id)!.alive, true);
 
     // Clean reset back to lobby removes proven status for fresh game
     room.resetToLobby();

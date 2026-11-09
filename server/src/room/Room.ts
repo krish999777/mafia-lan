@@ -811,20 +811,7 @@ export class Room {
 
     const disappearedMap = new Map<string, { id: string; name: string }>();
 
-    // 1. Safehouse defense check: Civilians who solved 0 minigames during the night are breached
-    const livingCivilians = Array.from(this.players.values()).filter(
-      (p) => p.alive && p.role === 'CIVILIAN'
-    );
-    for (const civ of livingCivilians) {
-      const solved = this.minigamesSolved.get(civ.id) || 0;
-      const passedDirect = this.minigameResults.get(civ.id) === true;
-      if (solved === 0 && !passedDirect) {
-        civ.alive = false;
-        disappearedMap.set(civ.id, { id: civ.id, name: civ.name });
-      }
-    }
-
-    // 2. Mafia assassination: ONLY executed if all living Mafia reached unanimous agreement
+    // 1. Mafia assassination: ONLY executed if all living Mafia reached unanimous agreement
     if (this.nightMafiaTargetId) {
       const targetPlayer = this.players.get(this.nightMafiaTargetId);
       if (targetPlayer && targetPlayer.alive) {
@@ -833,7 +820,7 @@ export class Room {
       }
     }
 
-    // 3. Identify Top Defender among surviving living civilians (only 50% of the time)
+    // 2. Identify Top Defender among surviving living civilians (only 50% of the time)
     const provenRoll = forceProvenRoll !== undefined ? forceProvenRoll : Math.random();
     const isProvenInnocentSelected = provenRoll < Room.PROVEN_INNOCENT_CHANCE;
 

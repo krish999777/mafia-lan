@@ -1,5 +1,20 @@
 export const MIN_PLAYERS = 4;
-export const MAX_PLAYERS = 15;
+export const MAX_PLAYERS = 30;
+
+export const calculateMafiaOptions = (totalPlayers: number): number[] => {
+  if (totalPlayers < MIN_PLAYERS || totalPlayers > MAX_PLAYERS) {
+    return [1];
+  }
+  const maxMafia = Math.max(1, Math.floor((totalPlayers - 1) / 3));
+  return Array.from({ length: maxMafia }, (_, i) => i + 1);
+};
+
+export const calculateMafiaCount = (totalPlayers: number): number => {
+  if (totalPlayers < MIN_PLAYERS || totalPlayers > MAX_PLAYERS) {
+    throw new Error(`Cannot calculate roles: player count must be between ${MIN_PLAYERS} and ${MAX_PLAYERS}`);
+  }
+  return Math.max(1, Math.floor((totalPlayers - 1) / 3));
+};
 
 export type Role = 'MAFIA' | 'CIVILIAN';
 

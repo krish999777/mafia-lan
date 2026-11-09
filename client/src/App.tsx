@@ -139,6 +139,7 @@ export const App: React.FC = () => {
             players={players}
             currentPlayerId={playerId}
             role={role}
+            teammates={teammates}
             isHost={isHost}
             nightResult={nightResult}
             provenCivilianIds={provenCivilianIds}
@@ -151,6 +152,8 @@ export const App: React.FC = () => {
           <Voting
             players={players}
             currentPlayerId={playerId}
+            role={role}
+            teammates={teammates}
             isHost={isHost}
             hasVoted={hasVoted}
             votedCount={votedCount}

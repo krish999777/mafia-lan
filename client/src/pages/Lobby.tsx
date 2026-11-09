@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlayerSummary, LanInfo, MIN_PLAYERS, MAX_PLAYERS, LobbySummary } from '@shared/types.js';
+import { PlayerSummary, LanInfo, MIN_PLAYERS, MAX_PLAYERS, LobbySummary, calculateMafiaOptions } from '@shared/types.js';
 import { PlayerCard } from '../components/PlayerCard.js';
 import { QRCodeModal } from '../components/QRCodeModal.js';
 
@@ -83,14 +83,7 @@ export const Lobby: React.FC<LobbyProps> = ({
     });
   };
 
-  const getMafiaOptions = (total: number): number[] => {
-    if (total <= 6) return [1];
-    if (total <= 9) return [1, 2];
-    if (total <= 12) return [1, 2, 3];
-    return [1, 2, 3, 4];
-  };
-
-  const mafiaOptions = getMafiaOptions(players.length);
+  const mafiaOptions = calculateMafiaOptions(players.length);
   const currentMafiaCount =
     mafiaCount && mafiaOptions.includes(mafiaCount)
       ? mafiaCount
@@ -295,12 +288,12 @@ export const Lobby: React.FC<LobbyProps> = ({
 
             <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', textAlign: 'center' }}>
               {isRoomFull
-                ? 'Room is full (15/15). Ready to start!'
+                ? `Room is full (${MAX_PLAYERS}/${MAX_PLAYERS}). Ready to start!`
                 : hasEnoughPlayers
                 ? `Ready to start (${players.length} players). More friends can still join (up to ${MAX_PLAYERS})!`
                 : `Waiting for ${MIN_PLAYERS - players.length} more player${
                     MIN_PLAYERS - players.length > 1 ? 's' : ''
-                  } to join over Wi-Fi (Supports 4-15 players).`}
+                  } to join over Wi-Fi (Supports ${MIN_PLAYERS}-${MAX_PLAYERS} players).`}
             </div>
           </div>
         ) : (
@@ -325,7 +318,7 @@ export const Lobby: React.FC<LobbyProps> = ({
                 ? `Ready to start (${players.length} players). Waiting for host...`
                 : `Waiting for ${MIN_PLAYERS - players.length} more player${
                     MIN_PLAYERS - players.length > 1 ? 's' : ''
-                  } (Supports 4-15 players)...`}
+                  } (Supports ${MIN_PLAYERS}-${MAX_PLAYERS} players)...`}
             </div>
           </div>
         )}

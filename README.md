@@ -9,7 +9,7 @@ A server-authoritative multiplayer Mafia game designed to run completely over a 
 - **100% Offline & Self-Contained**: No external cloud servers, APIs, databases, or CDNs. Pure Node.js + WebSocket + React.
 - **Server-Authoritative Architecture**: The host machine owns all state. Room codes, roles, secret chats, minigame evaluations, votes, and victory conditions are calculated and maintained in server memory.
 - **Instant LAN Access & QR Code Joining**: Listens on `0.0.0.0` and generates an offline SVG QR code (`http://<LAN_IP>:3000/?join=CODE`) so players scan and join in seconds.
-- **Configurable Syndicate Sizes**: Supports 4 to 15 players with host-configurable Mafia counts (1 for 4–6, 1–2 for 7–9, 1–3 for 10–12, 1–4 for 13–15).
+- **Configurable Syndicate Sizes**: Supports 4 to 30 players with host-configurable Mafia counts (1 for 4–6, up to 9 for 28–30 players).
 - **Day & Night Cycles**:
   - **Day Phase**: Open discussion followed by majority-based secret voting with live tally animations and secret role reveals on elimination.
   - **Night Phase (60s)**: End-to-end encrypted Mafia syndicate chat & consensus target selection, simultaneous with civilian defense minigames.

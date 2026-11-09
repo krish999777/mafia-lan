@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { PlayerSummary } from '@shared/types.js';
+import { PlayerSummary, Role } from '@shared/types.js';
 
 interface VotingProps {
   players: PlayerSummary[];
   currentPlayerId: string | null;
+  role?: Role | null;
+  teammates?: { id: string; name: string }[];
   isHost: boolean;
   hasVoted: boolean;
   votedCount: number;
@@ -16,6 +18,8 @@ interface VotingProps {
 export const Voting: React.FC<VotingProps> = ({
   players,
   currentPlayerId,
+  role,
+  teammates = [],
   isHost,
   hasVoted,
   votedCount,
@@ -98,10 +102,11 @@ export const Voting: React.FC<VotingProps> = ({
             {candidates.map((candidate) => {
               const isSelected = selectedTargetId === candidate.id;
               const isProvenInnocent = provenCivilianIds.includes(candidate.id);
+              const isMafiaAlly = role === 'MAFIA' && Boolean(teammates.some((t) => t.id === candidate.id));
               return (
                 <div
                   key={candidate.id}
-                  className={`candidate-item ${isSelected ? 'selected' : ''} ${isProvenInnocent ? 'candidate-proven-innocent' : ''}`}
+                  className={`candidate-item ${isSelected ? 'selected' : ''} ${isProvenInnocent ? 'candidate-proven-innocent' : ''} ${isMafiaAlly ? 'candidate-mafia-ally' : ''}`}
                   onClick={() => setSelectedTargetId(candidate.id)}
                 >
                   <div className="radio-circle">
@@ -116,6 +121,11 @@ export const Voting: React.FC<VotingProps> = ({
                     {isProvenInnocent && (
                       <span className="badge-proven-civilian" style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
                         🛡️ PROVEN INNOCENT
+                      </span>
+                    )}
+                    {isMafiaAlly && (
+                      <span className="badge-mafia-ally" style={{ fontSize: '0.68rem', padding: '2px 6px' }}>
+                        🗡️ MAFIA ALLY
                       </span>
                     )}
                   </div>
